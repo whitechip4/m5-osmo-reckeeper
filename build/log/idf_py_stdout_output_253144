@@ -1,0 +1,48 @@
+-- Found Git: /usr/bin/git (found version "2.43.0") 
+-- The C compiler identification is GNU 12.2.0
+-- The CXX compiler identification is GNU 12.2.0
+-- The ASM compiler identification is GNU
+-- Found assembler: /home/blacktip/.espressif/tools/xtensa-esp32-elf/esp-12.2.0_20230208/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /home/blacktip/.espressif/tools/xtensa-esp32-elf/esp-12.2.0_20230208/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /home/blacktip/.espressif/tools/xtensa-esp32-elf/esp-12.2.0_20230208/xtensa-esp32-elf/bin/xtensa-esp32-elf-g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Project is not inside a git repository, or git repository has no commits; will not use 'git describe' to determine PROJECT_VER.
+-- Building ESP-IDF components for target esp32
+NOTICE: Dependencies lock doesn't exist, solving dependencies.
+NOTICE: Updating lock file at /home/blacktip/repos/osmo-reckeeper/dependencies.lock
+NOTICE: Processing 1 dependencies:
+NOTICE: [1/1] idf (5.1.0)
+-- Project sdkconfig file /home/blacktip/repos/osmo-reckeeper/sdkconfig
+-- Looking for sys/types.h
+-- Looking for sys/types.h - found
+-- Looking for stdint.h
+-- Looking for stdint.h - found
+-- Looking for stddef.h
+-- Looking for stddef.h - found
+-- Check size of time_t
+-- Check size of time_t - done
+-- Found Python3: /home/blacktip/.espressif/python_env/idf5.1_py3.12_env/bin/python (found version "3.12.3") found components: Interpreter 
+-- Performing Test C_COMPILER_SUPPORTS_WFORMAT_SIGNEDNESS
+-- Performing Test C_COMPILER_SUPPORTS_WFORMAT_SIGNEDNESS - Success
+-- App "osmo_reckeeper" version: 1
+-- Adding linker script /home/blacktip/repos/osmo-reckeeper/build/esp-idf/esp_system/ld/memory.ld
+-- Adding linker script /home/blacktip/esp/esp-idf/components/esp_system/ld/esp32/sections.ld.in
+-- Adding linker script /home/blacktip/esp/esp-idf/components/esp_rom/esp32/ld/esp32.rom.ld
+-- Adding linker script /home/blacktip/esp/esp-idf/components/esp_rom/esp32/ld/esp32.rom.api.ld
+-- Adding linker script /home/blacktip/esp/esp-idf/components/esp_rom/esp32/ld/esp32.rom.libgcc.ld
+-- Adding linker script /home/blacktip/esp/esp-idf/components/esp_rom/esp32/ld/esp32.rom.newlib-data.ld
+-- Adding linker script /home/blacktip/esp/esp-idf/components/esp_rom/esp32/ld/esp32.rom.syscalls.ld
+-- Adding linker script /home/blacktip/esp/esp-idf/components/esp_rom/esp32/ld/esp32.rom.newlib-funcs.ld
+-- Adding linker script /home/blacktip/esp/esp-idf/components/soc/esp32/ld/esp32.peripherals.ld
+-- Components: M5GFX M5Unified app_trace app_update bootloader bootloader_support bt cmock console cxx driver efuse esp-tls esp_adc esp_app_format esp_coex esp_common esp_eth esp_event esp_gdbstub esp_hid esp_http_client esp_http_server esp_https_ota esp_https_server esp_hw_support esp_lcd esp_local_ctrl esp_mm esp_netif esp_netif_stack esp_partition esp_phy esp_pm esp_psram esp_ringbuf esp_rom esp_system esp_timer esp_wifi espcoredump esptool_py fatfs freertos hal heap http_parser idf_test ieee802154 json log lwip main mbedtls mqtt newlib nvs_flash openthread partition_table perfmon protobuf-c protocomm pthread sdmmc soc spi_flash spiffs tcp_transport ulp unity usb vfs wear_levelling wifi_provisioning wpa_supplicant xtensa
+-- Component paths: /home/blacktip/repos/osmo-reckeeper/components/M5GFX /home/blacktip/repos/osmo-reckeeper/components/M5Unified /home/blacktip/esp/esp-idf/components/app_trace /home/blacktip/esp/esp-idf/components/app_update /home/blacktip/esp/esp-idf/components/bootloader /home/blacktip/esp/esp-idf/components/bootloader_support /home/blacktip/esp/esp-idf/components/bt /home/blacktip/esp/esp-idf/components/cmock /home/blacktip/esp/esp-idf/components/console /home/blacktip/esp/esp-idf/components/cxx /home/blacktip/esp/esp-idf/components/driver /home/blacktip/esp/esp-idf/components/efuse /home/blacktip/esp/esp-idf/components/esp-tls /home/blacktip/esp/esp-idf/components/esp_adc /home/blacktip/esp/esp-idf/components/esp_app_format /home/blacktip/esp/esp-idf/components/esp_coex /home/blacktip/esp/esp-idf/components/esp_common /home/blacktip/esp/esp-idf/components/esp_eth /home/blacktip/esp/esp-idf/components/esp_event /home/blacktip/esp/esp-idf/components/esp_gdbstub /home/blacktip/esp/esp-idf/components/esp_hid /home/blacktip/esp/esp-idf/components/esp_http_client /home/blacktip/esp/esp-idf/components/esp_http_server /home/blacktip/esp/esp-idf/components/esp_https_ota /home/blacktip/esp/esp-idf/components/esp_https_server /home/blacktip/esp/esp-idf/components/esp_hw_support /home/blacktip/esp/esp-idf/components/esp_lcd /home/blacktip/esp/esp-idf/components/esp_local_ctrl /home/blacktip/esp/esp-idf/components/esp_mm /home/blacktip/esp/esp-idf/components/esp_netif /home/blacktip/esp/esp-idf/components/esp_netif_stack /home/blacktip/esp/esp-idf/components/esp_partition /home/blacktip/esp/esp-idf/components/esp_phy /home/blacktip/esp/esp-idf/components/esp_pm /home/blacktip/esp/esp-idf/components/esp_psram /home/blacktip/esp/esp-idf/components/esp_ringbuf /home/blacktip/esp/esp-idf/components/esp_rom /home/blacktip/esp/esp-idf/components/esp_system /home/blacktip/esp/esp-idf/components/esp_timer /home/blacktip/esp/esp-idf/components/esp_wifi /home/blacktip/esp/esp-idf/components/espcoredump /home/blacktip/esp/esp-idf/components/esptool_py /home/blacktip/esp/esp-idf/components/fatfs /home/blacktip/esp/esp-idf/components/freertos /home/blacktip/esp/esp-idf/components/hal /home/blacktip/esp/esp-idf/components/heap /home/blacktip/esp/esp-idf/components/http_parser /home/blacktip/esp/esp-idf/components/idf_test /home/blacktip/esp/esp-idf/components/ieee802154 /home/blacktip/esp/esp-idf/components/json /home/blacktip/esp/esp-idf/components/log /home/blacktip/esp/esp-idf/components/lwip /home/blacktip/repos/osmo-reckeeper/main /home/blacktip/esp/esp-idf/components/mbedtls /home/blacktip/esp/esp-idf/components/mqtt /home/blacktip/esp/esp-idf/components/newlib /home/blacktip/esp/esp-idf/components/nvs_flash /home/blacktip/esp/esp-idf/components/openthread /home/blacktip/esp/esp-idf/components/partition_table /home/blacktip/esp/esp-idf/components/perfmon /home/blacktip/esp/esp-idf/components/protobuf-c /home/blacktip/esp/esp-idf/components/protocomm /home/blacktip/esp/esp-idf/components/pthread /home/blacktip/esp/esp-idf/components/sdmmc /home/blacktip/esp/esp-idf/components/soc /home/blacktip/esp/esp-idf/components/spi_flash /home/blacktip/esp/esp-idf/components/spiffs /home/blacktip/esp/esp-idf/components/tcp_transport /home/blacktip/esp/esp-idf/components/ulp /home/blacktip/esp/esp-idf/components/unity /home/blacktip/esp/esp-idf/components/usb /home/blacktip/esp/esp-idf/components/vfs /home/blacktip/esp/esp-idf/components/wear_levelling /home/blacktip/esp/esp-idf/components/wifi_provisioning /home/blacktip/esp/esp-idf/components/wpa_supplicant /home/blacktip/esp/esp-idf/components/xtensa
+-- Configuring done (5.0s)
+-- Generating done (0.5s)
+-- Build files have been written to: /home/blacktip/repos/osmo-reckeeper/build

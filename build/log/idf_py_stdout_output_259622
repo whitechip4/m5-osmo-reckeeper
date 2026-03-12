@@ -1,0 +1,7 @@
+[1/4] cd /home/blacktip/repos/osmo-reckeeper/build/esp-idf/esptool_py && /home/blacktip/.espressif/python_env/idf5.1_py3.12_env/bin/python /home/blacktip/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/blacktip/repos/osmo-reckeeper/build/partition_table/partition-table.bin /home/blacktip/repos/osmo-reckeeper/build/osmo_reckeeper.bin
+osmo_reckeeper.bin binary size 0x5c490 bytes. Smallest app partition is 0x100000 bytes. 0xa3b70 bytes (64%) free.
+[2/4] Performing build step for 'bootloader'
+[1/1] cd /home/blacktip/repos/osmo-reckeeper/build/bootloader/esp-idf/esptool_py && /home/blacktip/.espressif/python_env/idf5.1_py3.12_env/bin/python /home/blacktip/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /home/blacktip/repos/osmo-reckeeper/build/bootloader/bootloader.bin
+Bootloader binary size 0x6800 bytes. 0x800 bytes (7%) free.
+[3/4] No install step for 'bootloader'
+[4/4] Completed 'bootloader'
