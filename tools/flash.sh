@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
+# Setup ESP-IDF environment if not already set
 if [ -z "$IDF_PATH" ]; then
-    echo "エラー: ESP-IDF環境が設定されていません"
-    echo "実行: . ~/esp/esp-idf/export.sh"
-    exit 1
+    echo "ESP-IDF environment not set, sourcing export.sh..."
+    . ~/esp/esp-idf/export.sh
 fi
 
 echo "M5StickC Plus2 Build & Flash"
