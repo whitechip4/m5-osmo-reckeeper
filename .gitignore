@@ -1,0 +1,17 @@
+# Build directories
+build/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ESP-IDF generated files
+sdkconfig.old
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
