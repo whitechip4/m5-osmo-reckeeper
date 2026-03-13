@@ -24,7 +24,3 @@ CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 
 # Stack sizes
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
-
-# CCache (Build acceleration)
-CONFIG_CCACHE=y
-CONFIG_CCACHE_DIR=".ccache"

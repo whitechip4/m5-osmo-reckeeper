@@ -7,7 +7,12 @@ if [ -z "$IDF_PATH" ]; then
     . ~/esp/esp-idf/export.sh
 fi
 
-echo "M5StickC Plus2 Build & Flash"
+# Enable CCache for faster builds
+export IDF_CCACHE_ENABLE=1
+export CCACHE_COMPILERCHECK=content
+export USE_CCACHE=1
+
+echo "M5StickC Plus2 Build & Flash (with CCache)"
 idf.py set-target esp32
 idf.py build
 idf.py -p /dev/ttyACM0 flash

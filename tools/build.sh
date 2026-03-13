@@ -8,6 +8,7 @@ if [ -z "$IDF_PATH" ]; then
 fi
 
 # Enable CCache for faster builds
+export IDF_CCACHE_ENABLE=1
 export CCACHE_COMPILERCHECK=content
 export USE_CCACHE=1
 
