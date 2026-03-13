@@ -28,7 +28,7 @@ extern "C" void app_main(void)
     // Display "STOP" as initial state (white text, centered)
     M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
     M5.Display.setTextDatum(top_center);
-    M5.Display.setTextSize(5);
+    M5.Display.setTextSize(3);
     M5.Display.drawString("STOP", M5.Display.width() / 2, M5.Display.height() / 2);
 
     ESP_LOGI(TAG, "Display test: 'STOP' should be visible on LCD");
