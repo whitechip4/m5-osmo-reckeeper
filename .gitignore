@@ -19,3 +19,7 @@ __pycache__/
 # Sensitive information
 .env
 *.env
+
+# CCache
+.ccache/
+.cache/

@@ -87,4 +87,28 @@ void ble_set_state_callback(void (*callback)(ble_state_t new_state));
  */
 const ble_connection_t* ble_get_connection(void);
 
+/**
+ * @brief Notification callback type
+ * 通知コールバック型
+ */
+typedef void (*ble_notify_callback_t)(const uint8_t *data, uint16_t length);
+
+/**
+ * @brief Register callback for BLE notifications
+ * BLE通知コールバック登録
+ *
+ * @param callback Function to call when notification received
+ */
+void ble_set_notify_callback(ble_notify_callback_t callback);
+
+/**
+ * @brief Send data via BLE write characteristic
+ * BLE書き込みキャラクタリスティック経由でデータ送信
+ *
+ * @param data Data to send
+ * @param length Data length
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t ble_write(const uint8_t *data, uint16_t length);
+
 #endif /* __BLE_SIMPLE_H__ */

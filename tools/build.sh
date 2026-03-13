@@ -7,6 +7,10 @@ if [ -z "$IDF_PATH" ]; then
     . ~/esp/esp-idf/export.sh
 fi
 
-echo "M5StickC Plus2 Build"
+# Enable CCache for faster builds
+export CCACHE_COMPILERCHECK=content
+export USE_CCACHE=1
+
+echo "M5StickC Plus2 Build (with CCache)"
 idf.py build
 echo "Build complete!"

@@ -38,6 +38,7 @@ void M5_display_drawString(const char *string, int x, int y);
 #endif
 
 #include "ble_simple.h"
+#include "dji_protocol.h"
 
 static const char *TAG = "main";
 
@@ -63,12 +64,22 @@ typedef struct {
     uint16_t color;
 } state_display_t;
 
-static const state_display_t state_display[] = {
+static const state_display_t ble_state_display[] = {
     [BLE_STATE_IDLE]       = {"READY", TFT_WHITE},
     [BLE_STATE_SCANNING]   = {"SCAN...", TFT_YELLOW},
     [BLE_STATE_CONNECTING] = {"CONN...", TFT_CYAN},
     [BLE_STATE_CONNECTED]  = {"CONNECTED", TFT_GREEN},
     [BLE_STATE_FAILED]     = {"ERROR", TFT_RED}
+};
+
+/* DJI state display strings and colors */
+/* DJI状態表示文字列と色 */
+static const state_display_t dji_state_display[] = {
+    [DJI_STATE_IDLE]      = {"READY", TFT_WHITE},
+    [DJI_STATE_PAIRING]   = {"PAIRING...", TFT_MAGENTA},
+    [DJI_STATE_PAIRED]    = {"PAIRED", TFT_CYAN},
+    [DJI_STATE_RECORDING] = {"REC", TFT_RED},
+    [DJI_STATE_FAILED]    = {"PAIR ERR", TFT_RED}
 };
 
 /* LCD update function */
@@ -92,8 +103,34 @@ static void ble_state_callback(ble_state_t new_state) {
         return;
     }
 
-    const state_display_t *display = &state_display[new_state];
+    const state_display_t *display = &ble_state_display[new_state];
     ESP_LOGI(TAG, "BLE state changed: %s", display->text);
+
+    /* Only update LCD for BLE states (not for DJI states) */
+    /* BLE状態のみLCD更新 (DJI状態は別途更新) */
+    dji_state_t dji_state = dji_get_state();
+    if (dji_state == DJI_STATE_IDLE || dji_state == DJI_STATE_FAILED) {
+        update_lcd(display->text, display->color);
+    }
+
+    /* Auto-start pairing when BLE connected */
+    /* BLE接続時に自動ペアリング開始 */
+    if (new_state == BLE_STATE_CONNECTED) {
+        ESP_LOGI(TAG, "BLE connected, starting DJI pairing...");
+        dji_start_pairing();
+    }
+}
+
+/* DJI state change callback */
+/* DJI状態変化コールバック */
+static void dji_state_callback(dji_state_t new_state) {
+    if (new_state < DJI_STATE_IDLE || new_state > DJI_STATE_FAILED) {
+        ESP_LOGW(TAG, "Invalid DJI state: %d", new_state);
+        return;
+    }
+
+    const state_display_t *display = &dji_state_display[new_state];
+    ESP_LOGI(TAG, "DJI state changed: %s", display->text);
     update_lcd(display->text, display->color);
 }
 
@@ -124,6 +161,24 @@ void app_main(void) {
     /* Register BLE state callback */
     /* BLE状態コールバック登録 */
     ble_set_state_callback(ble_state_callback);
+
+    /* Initialize DJI protocol */
+    /* DJIプロトコル初期化 */
+    ret = dji_protocol_init();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "DJI protocol initialization failed: %s", esp_err_to_name(ret));
+        update_lcd("DJI ERROR", TFT_RED);
+        return;
+    }
+    ESP_LOGI(TAG, "DJI protocol initialized");
+
+    /* Register DJI state callback */
+    /* DJI状態コールバック登録 */
+    dji_set_state_callback(dji_state_callback);
+
+    /* Register BLE notification callback for DJI protocol */
+    /* DJIプロトコル用BLE通知コールバック登録 */
+    ble_set_notify_callback(dji_handle_notification);
 
     /* Display initial state */
     /* 初期状態表示 */

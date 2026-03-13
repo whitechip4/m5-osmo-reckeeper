@@ -25,6 +25,7 @@ static const char *TAG = "BLE";
 /* BLE 状態マシン変数 */
 static ble_state_t s_current_state = BLE_STATE_IDLE;
 static void (*s_state_callback)(ble_state_t) = NULL;
+static ble_notify_callback_t s_notify_callback = NULL;
 
 /* Connection Information */
 /* 接続情報 */
@@ -255,11 +256,49 @@ void ble_set_state_callback(void (*callback)(ble_state_t)) {
     s_state_callback = callback;
 }
 
+void ble_set_notify_callback(ble_notify_callback_t callback) {
+    s_notify_callback = callback;
+}
+
 const ble_connection_t* ble_get_connection(void) {
     if (s_connection.is_connected) {
         return &s_connection;
     }
     return NULL;
+}
+
+esp_err_t ble_write(const uint8_t *data, uint16_t length) {
+    if (!s_connection.is_connected) {
+        ESP_LOGW(TAG, "Cannot write: not connected");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (s_connection.write_handle == 0) {
+        ESP_LOGE(TAG, "Write handle not set");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    ESP_LOGI(TAG, "Writing %u bytes to handle 0x%04X", length, s_connection.write_handle);
+
+    /* Cast away const for API compatibility */
+    /* API互換性のためconstを除外 */
+    esp_err_t ret = esp_ble_gattc_write_char(
+        s_connection.gattc_if,
+        s_connection.conn_id,
+        s_connection.write_handle,
+        length,
+        (uint8_t *)data,
+        ESP_GATT_WRITE_TYPE_RSP,  /* Changed to RSP for confirmation / 確認のためRSPに変更 */
+        ESP_GATT_AUTH_REQ_NONE
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Write failed: %s", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "Write operation initiated successfully");
+    }
+
+    return ret;
 }
 
 /* -------------------------
@@ -368,6 +407,13 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
 static void gattc_event_handler(esp_gattc_cb_event_t event,
                                 esp_gatt_if_t gattc_if,
                                 esp_ble_gattc_cb_param_t *param) {
+    /* Log all events for debugging */
+    /* デバッグ用に全てのイベントをログ */
+    if (event != ESP_GATTC_REG_EVT && event != ESP_GATTC_CFG_MTU_EVT &&
+        event != ESP_GATTC_SEARCH_RES_EVT) {
+        ESP_LOGI(TAG, "GATTC event: %d", event);
+    }
+
     switch (event) {
     case ESP_GATTC_REG_EVT:
         /* GATTC registration complete */
@@ -480,6 +526,65 @@ static void gattc_event_handler(esp_gattc_cb_event_t event,
             ESP_LOGI(TAG, "Found write characteristic, handle=0x%04X", s_connection.write_handle);
         }
 
+        /* Enable notifications on notify characteristic */
+        /* 通知キャラクタリスティックの通知有効化 */
+        if (s_connection.notify_handle != 0) {
+            /* Register for notifications (required for Bluedroid stack) */
+            /* 通知登録（Bluedroidスタックで必須） */
+            ESP_LOGI(TAG, "Registering for notifications...");
+            esp_err_t ret = esp_ble_gattc_register_for_notify(
+                s_connection.gattc_if,
+                s_connection.remote_bda,
+                s_connection.notify_handle
+            );
+
+            if (ret != ESP_OK) {
+                ESP_LOGW(TAG, "Failed to register for notify: %s", esp_err_to_name(ret));
+            } else {
+                ESP_LOGI(TAG, "Successfully registered for notifications");
+            }
+
+            /* Find CCC descriptor */
+            /* CCCディスクリプタ検索 */
+            uint16_t ccc_handle = 0;
+            esp_gattc_descr_elem_t descr_result;
+            count = 1;
+            esp_bt_uuid_t ccc_uuid = {
+                .len = ESP_UUID_LEN_16,
+                .uuid.uuid16 = ESP_GATT_UUID_CHAR_CLIENT_CONFIG
+            };
+
+            esp_ble_gattc_get_descr_by_char_handle(gattc_if,
+                                                   s_connection.conn_id,
+                                                   s_connection.notify_handle,
+                                                   ccc_uuid,
+                                                   &descr_result,
+                                                   &count);
+            if (count > 0) {
+                ccc_handle = descr_result.handle;
+                ESP_LOGI(TAG, "Found CCC descriptor, handle=0x%04X", ccc_handle);
+
+                /* Write 0x0001 to enable notifications */
+                /* 通知有効化のため0x0001を書き込み */
+                uint16_t notify_value = 0x0001;
+                ret = esp_ble_gattc_write_char_descr(
+                    gattc_if,
+                    s_connection.conn_id,
+                    ccc_handle,
+                    sizeof(notify_value),
+                    (uint8_t *)&notify_value,
+                    ESP_GATT_WRITE_TYPE_NO_RSP,
+                    ESP_GATT_AUTH_REQ_NONE
+                );
+
+                if (ret == ESP_OK) {
+                    ESP_LOGI(TAG, "CCC write initiated");
+                } else {
+                    ESP_LOGW(TAG, "Failed to write CCC: %s", esp_err_to_name(ret));
+                }
+            }
+        }
+
         /* Connection complete! */
         /* 接続完了！ */
         set_state(BLE_STATE_CONNECTED);
@@ -492,6 +597,61 @@ static void gattc_event_handler(esp_gattc_cb_event_t event,
         s_is_connecting = false;
         ESP_LOGI(TAG, "Disconnected, reason=0x%x", param->disconnect.reason);
         set_state(BLE_STATE_IDLE);
+        break;
+
+    case ESP_GATTC_NOTIFY_EVT:
+        /* Notification received (both notify and indicate) */
+        /* 通知受信（notifyとindicateの両方） */
+        ESP_LOGI(TAG, "Notify/Indicate event: handle=0x%04X, len=%d, is_notify=%d",
+                 param->notify.handle, param->notify.value_len, param->notify.is_notify);
+
+        if (param->notify.value_len > 0) {
+            ESP_LOGI(TAG, "Data: %02X %02X %02X %02X %02X %02X %02X %02X...",
+                     param->notify.value[0],
+                     param->notify.value_len > 1 ? param->notify.value[1] : 0,
+                     param->notify.value_len > 2 ? param->notify.value[2] : 0,
+                     param->notify.value_len > 3 ? param->notify.value[3] : 0,
+                     param->notify.value_len > 4 ? param->notify.value[4] : 0,
+                     param->notify.value_len > 5 ? param->notify.value[5] : 0,
+                     param->notify.value_len > 6 ? param->notify.value[6] : 0,
+                     param->notify.value_len > 7 ? param->notify.value[7] : 0);
+        }
+
+        /* Call registered callback if any */
+        /* 登録されたコールバックがあれば呼び出し */
+        if (s_notify_callback != NULL) {
+            s_notify_callback(param->notify.value, param->notify.value_len);
+        }
+        break;
+
+    case ESP_GATTC_WRITE_CHAR_EVT:
+        /* Characteristic write completed */
+        /* キャラクタリスティック書き込み完了 */
+        ESP_LOGI(TAG, "Char write completed: handle=0x%04X, status=%d",
+                 param->write.handle, param->write.status);
+        if (param->write.status != ESP_GATT_OK) {
+            ESP_LOGW(TAG, "Char write failed with status: %d", param->write.status);
+        }
+        break;
+
+    case ESP_GATTC_WRITE_DESCR_EVT:
+        /* Descriptor write completed */
+        /* ディスクリプタ書き込み完了 */
+        ESP_LOGI(TAG, "Descriptor write completed: handle=0x%04X, status=%d",
+                 param->write.handle, param->write.status);
+        if (param->write.status != ESP_GATT_OK) {
+            ESP_LOGW(TAG, "Descriptor write failed with status: %d", param->write.status);
+        }
+        break;
+
+    case ESP_GATTC_REG_FOR_NOTIFY_EVT:
+        /* Notification registration completed */
+        /* 通知登録完了 */
+        ESP_LOGI(TAG, "Notification registration completed: status=%d, handle=0x%04X",
+                 param->reg_for_notify.status, param->reg_for_notify.handle);
+        if (param->reg_for_notify.status != ESP_GATT_OK) {
+            ESP_LOGW(TAG, "Notification registration failed: %d", param->reg_for_notify.status);
+        }
         break;
 
     default:

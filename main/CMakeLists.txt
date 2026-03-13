@@ -1,6 +1,9 @@
 idf_component_register(
     SRCS "main.c" "ble_simple.c" "m5_wrapper.cpp"
-    INCLUDE_DIRS "."
+         "dji_protocol.c"
+         "protocol/dji_protocol_parser.c"
+         "protocol/crc16.c" "protocol/crc32.c"
+    INCLUDE_DIRS "." "protocol"
     PRIV_REQUIRES M5Unified bt nvs_flash
 )
 
