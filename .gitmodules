@@ -4,3 +4,6 @@
 [submodule "components/M5GFX"]
 	path = components/M5GFX
 	url = https://github.com/m5stack/M5GFX.git
+[submodule "reference/OsmoDemo"]
+	path = reference/OsmoDemo
+	url = https://github.com/dji-sdk/Osmo-GPS-Controller-Demo.git
