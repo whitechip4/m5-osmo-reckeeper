@@ -171,6 +171,42 @@ uint32_t dji_get_device_id(void);
  */
 uint8_t dji_get_camera_battery_level(void);
 
+/**
+ * @brief Get SD card remaining capacity in MB
+ * @return Remaining capacity in MB, 0 means unavailable
+ *
+ * @brief SDカード残り容量を取得 (MB)
+ * @return 残り容量（MB）、0は利用不可
+ */
+uint32_t dji_get_sd_remaining_mb(void);
+
+/**
+ * @brief Get SD card remaining capacity percentage (0-100)
+ * @return Remaining capacity percentage, 0 means unavailable
+ *
+ * @brief SDカード残り容量パーセンテージを取得 (0-100)
+ * @return 残り容量パーセンテージ、0は利用不可
+ */
+uint8_t dji_get_sd_capacity_percentage(void);
+
+/**
+ * @brief Get estimated remaining photos
+ * @return Remaining photo count, 0 means unavailable
+ *
+ * @brief 撮影可能残り枚数を取得
+ * @return 残り写真枚数、0は利用不可
+ */
+uint32_t dji_get_sd_remaining_photos(void);
+
+/**
+ * @brief Get estimated remaining recording time (seconds)
+ * @return Remaining recording time in seconds, 0 means unavailable
+ *
+ * @brief 残り録画時間を取得 (秒)
+ * @return 残り録画時間（秒）、0は利用不可
+ */
+uint32_t dji_get_sd_remaining_time(void);
+
 #ifdef __cplusplus
 }
 #endif

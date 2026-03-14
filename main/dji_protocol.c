@@ -37,6 +37,13 @@ static uint32_t s_camera_device_id = 0;    /* Camera device ID / カメラデバ
 /* カメラバッテリー追跡 */
 static uint8_t s_camera_battery_level = 0; /* 0-100%, 0 means unavailable / 0-100%, 0は利用不可 */
 
+/* SD card tracking */
+/* SDカード追跡 */
+static uint32_t s_sd_remaining_mb = 0;      /* SD card remaining capacity in MB / SDカード残容量 (MB) */
+static uint32_t s_sd_total_mb = 0;          /* SD card total capacity in MB (calculated) / SDカード総容量 (MB) */
+static uint32_t s_sd_remaining_photos = 0;  /* Remaining photo count / 残り写真枚数 */
+static uint32_t s_sd_remaining_time = 0;    /* Remaining recording time (seconds) / 残り録画時間 (秒) */
+
 /* Pairing state variables */
 /* ペアリング状態変数 */
 static bool s_waiting_for_response = false;
@@ -368,6 +375,12 @@ void dji_handle_notification(const uint8_t *data, uint16_t length) {
             /* カメラバッテリー残量を抽出 */
             s_camera_battery_level = status->camera_bat_percentage;
 
+            /* Extract SD card information */
+            /* SDカード情報抽出 */
+            s_sd_remaining_mb = status->remain_capacity;
+            s_sd_remaining_photos = status->remain_photo_num;
+            s_sd_remaining_time = status->remain_time;
+
             /* Log status periodically (not every time to reduce spam) */
             /* 定期的に状態をログ（スパム抑制） */
             static uint32_t last_log_time = 0;
@@ -594,4 +607,33 @@ uint32_t dji_get_device_id(void) {
 /* カメラバッテリー残量を取得 */
 uint8_t dji_get_camera_battery_level(void) {
     return s_camera_battery_level;
+}
+
+/* Get SD card remaining capacity in MB */
+/* SDカード残り容量を取得 (MB) */
+uint32_t dji_get_sd_remaining_mb(void) {
+    return s_sd_remaining_mb;
+}
+
+/* Get SD card remaining capacity percentage (0-100) */
+/* SDカード残り容量パーセンテージを取得 (0-100) */
+uint8_t dji_get_sd_capacity_percentage(void) {
+    /* Calculate percentage if total capacity is known */
+    /* 総容量がわかる場合はパーセンテージ計算 */
+    if (s_sd_total_mb > 0) {
+        return (uint8_t)((s_sd_remaining_mb * 100) / s_sd_total_mb);
+    }
+    return 0;
+}
+
+/* Get estimated remaining photos */
+/* 撮影可能残り枚数を取得 */
+uint32_t dji_get_sd_remaining_photos(void) {
+    return s_sd_remaining_photos;
+}
+
+/* Get estimated remaining recording time (seconds) */
+/* 残り録画時間を取得 (秒) */
+uint32_t dji_get_sd_remaining_time(void) {
+    return s_sd_remaining_time;
 }

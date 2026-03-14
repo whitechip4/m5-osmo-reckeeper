@@ -572,6 +572,45 @@ void app_main(void) {
             }
         }
 
+        /* Update SD card display when connected */
+        /* 接続時にSDカード表示を更新 */
+        if (dji_state == DJI_STATE_PAIRED || dji_state == DJI_STATE_RECORDING) {
+            static uint32_t last_sd_remaining_mb = 0xFFFFFFFF;  /* Initialize to impossible value */
+
+            uint32_t current_sd_mb = dji_get_sd_remaining_mb();
+            if (current_sd_mb != last_sd_remaining_mb && current_sd_mb > 0) {
+                /* Clear SD card area (3rd line of battery display) */
+                /* SDカードエリアをクリア（バッテリー表示の3行目） */
+                M5_display_fillRect(0, 22, M5_display_width(), 10, TFT_BLACK);
+
+                /* Determine color based on remaining capacity */
+                /* 残り容量に応じて色を決定 */
+                uint32_t sd_color;
+                if (current_sd_mb < 1024) {        /* < 1 GB */
+                    sd_color = TFT_RED;            /* Critical / 危険 */
+                } else if (current_sd_mb < 4096) { /* < 4 GB */
+                    sd_color = TFT_YELLOW;         /* Low / 低残量 */
+                } else {
+                    sd_color = TFT_GREEN;          /* Normal / 通常 */
+                }
+
+                char sd_str[32];
+                /* Display in GB if > 1024 MB, else MB */
+                if (current_sd_mb >= 1024) {
+                    snprintf(sd_str, sizeof(sd_str), "SD:%.1fGB", current_sd_mb / 1024.0);
+                } else {
+                    snprintf(sd_str, sizeof(sd_str), "SD:%luMB", current_sd_mb);
+                }
+
+                M5_display_setTextSize(1);
+                M5Display_setTextDatum(top_left);
+                M5_display_setTextColor(sd_color, TFT_BLACK);
+                M5_display_drawString(sd_str, 2, 22);
+
+                last_sd_remaining_mb = current_sd_mb;
+            }
+        }
+
         /* Check button A press */
         /* ボタンA押下チェック */
         extern int M5_BtnA_wasPressed(void);  /* Forward declaration */
