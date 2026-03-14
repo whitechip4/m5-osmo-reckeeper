@@ -57,6 +57,7 @@ static const char *TAG = "main";
 /* Text datum constants */
 /* テキスト基準点定数 */
 #define top_center 0
+#define top_right 2
 
 /* BLE state display strings and colors */
 /* BLE状態表示文字列と色 */
@@ -133,7 +134,42 @@ static void dji_state_callback(dji_state_t new_state) {
 
     const state_display_t *display = &dji_state_display[new_state];
     ESP_LOGI(TAG, "DJI state changed: %s", display->text);
-    update_lcd(display->text, display->color);
+
+    /* Check if Rec Keep mode is enabled for display */
+    /* Rec Keepモード状態確認 */
+    extern bool dji_is_rec_keep_mode_enabled(void);  /* Forward declaration */
+    bool rec_keep_enabled = dji_is_rec_keep_mode_enabled();
+
+    /* Update display with Rec Keep indicator */
+    /* Rec Keep表示付きで更新 */
+    M5_display_fillScreen(TFT_BLACK);
+    M5_display_setTextColor(display->color, TFT_BLACK);
+    M5Display_setTextDatum(top_center);
+    M5_display_setTextSize(2);
+
+    int x = M5_display_width() / 2;
+    int y = M5_display_height() / 2 - 10;
+    M5_display_drawString(display->text, x, y);
+
+    /* Draw Rec Keep indicator in top-right corner */
+    /* 右上にRec Keep表示 */
+    if (rec_keep_enabled) {
+        M5_display_setTextSize(1);
+        M5_display_setTextColor(TFT_GREEN, TFT_BLACK);
+        M5Display_setTextDatum(top_right);
+        M5_display_drawString("RK:ON", M5_display_width() - 5, 5);
+    }
+}
+
+/* Rec Keep mode change callback */
+/* Rec Keepモード変化コールバック */
+static void rec_keep_mode_callback(bool enabled) {
+    ESP_LOGI(TAG, "Rec Keep mode changed: %s", enabled ? "ON" : "OFF");
+
+    /* Refresh LCD to update Rec Keep indicator */
+    /* Rec Keep表示更新のためにLCDリフレッシュ */
+    dji_state_t dji_state = dji_get_state();
+    dji_state_callback(dji_state);
 }
 
 /* Main application entry point */
@@ -188,6 +224,11 @@ void app_main(void) {
     /* DJI状態コールバック登録 */
     dji_set_state_callback(dji_state_callback);
 
+    /* Register Rec Keep mode callback */
+    /* Rec Keepモードコールバック登録 */
+    extern void dji_set_rec_keep_callback(void (*callback)(bool));  /* Forward declaration */
+    dji_set_rec_keep_callback(rec_keep_mode_callback);
+
     /* Register BLE notification callback for DJI protocol */
     /* DJIプロトコル用BLE通知コールバック登録 */
     ble_set_notify_callback(dji_handle_notification);
@@ -207,6 +248,7 @@ void app_main(void) {
         /* Check button A press */
         /* ボタンA押下チェック */
         extern int M5_BtnA_wasPressed(void);  /* Forward declaration */
+        extern int M5_BtnB_wasPressed(void);  /* Forward declaration */
         if (M5_BtnA_wasPressed()) {
             ble_state_t ble_state = ble_get_state();
             dji_state_t dji_state = dji_get_state();
@@ -240,6 +282,23 @@ void app_main(void) {
             } else {
                 ESP_LOGW(TAG, "Button pressed but not in appropriate state (BLE=%d, DJI=%d)",
                          ble_state, dji_state);
+            }
+        }
+
+        /* Check button B press */
+        /* ボタンB押下チェック */
+        if (M5_BtnB_wasPressed()) {
+            dji_state_t dji_state = dji_get_state();
+            if (dji_state == DJI_STATE_PAIRED || dji_state == DJI_STATE_RECORDING) {
+                /* Toggle Rec Keep mode */
+                /* Rec Keepモード切り替え */
+                extern bool dji_is_rec_keep_mode_enabled(void);  /* Forward declaration */
+                extern esp_err_t dji_set_rec_keep_mode(bool);    /* Forward declaration */
+                bool current = dji_is_rec_keep_mode_enabled();
+                esp_err_t ret = dji_set_rec_keep_mode(!current);
+                if (ret != ESP_OK) {
+                    ESP_LOGE(TAG, "Failed to set Rec Keep mode: %s", esp_err_to_name(ret));
+                }
             }
         }
 

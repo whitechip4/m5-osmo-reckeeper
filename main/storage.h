@@ -58,6 +58,25 @@ bool storage_is_paired(void);
  */
 esp_err_t storage_clear_paired_device(void);
 
+/**
+ * @brief Save Rec Keep mode enabled state
+ *        Rec Keepモード状態保存
+ *
+ * @param enabled true to enable Rec Keep mode, false to disable
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t storage_save_rec_keep_mode(bool enabled);
+
+/**
+ * @brief Get Rec Keep mode enabled state
+ *        Rec Keepモード状態取得
+ *
+ * @param enabled Output buffer for Rec Keep mode state
+ * @param is_found Output flag indicating if Rec Keep mode setting was found
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t storage_get_rec_keep_mode(bool *enabled, bool *is_found);
+
 #ifdef __cplusplus
 }
 #endif

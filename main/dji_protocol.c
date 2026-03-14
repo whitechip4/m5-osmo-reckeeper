@@ -12,6 +12,7 @@
 #include "esp_timer.h"
 #include "dji_protocol.h"
 #include "storage.h"
+#include "config.h"
 #include "protocol/dji_protocol_parser.h"
 #include "protocol/dji_protocol_data_structures.h"
 #include "ble_simple.h"
@@ -34,6 +35,13 @@ static bool s_waiting_for_response = false;
 static bool s_waiting_for_camera_request = false;
 static uint16_t s_expected_seq = 0;
 
+/* Rec Keep mode state */
+/* Rec Keepモード状態 */
+static bool s_rec_keep_enabled = false;
+static bool s_local_stop_pending = false;
+static esp_timer_handle_t s_rec_keep_timer = NULL;
+static void (*s_rec_keep_callback)(bool) = NULL;
+
 /* State management helper */
 /* 状態管理ヘルパー */
 static void set_dji_state(dji_state_t new_state) {
@@ -52,6 +60,20 @@ static uint16_t get_next_seq(void) {
     return ++s_seq;
 }
 
+/* Forward declaration */
+/* 前方宣言 */
+static esp_err_t dji_send_record_command(bool start);
+
+/* Rec Keep timer callback */
+/* Rec Keepタイマーコールバック */
+static void rec_keep_timer_callback(void* arg) {
+    ESP_LOGI(TAG, "Rec Keep timer triggered, restarting recording...");
+    if (!s_is_recording && s_rec_keep_enabled) {
+        dji_send_record_command(true);
+    }
+    s_local_stop_pending = false;
+}
+
 esp_err_t dji_protocol_init(void) {
     ESP_LOGI(TAG, "Initializing DJI protocol...");
     s_dji_state = DJI_STATE_IDLE;
@@ -60,6 +82,35 @@ esp_err_t dji_protocol_init(void) {
     s_waiting_for_response = false;
     s_waiting_for_camera_request = false;
     s_expected_seq = 0;
+    s_local_stop_pending = false;
+
+    /* Restore Rec Keep mode from NVS */
+    /* NVSからRec Keepモード復元 */
+    bool is_found = false;
+    bool saved_mode = false;
+    if (storage_get_rec_keep_mode(&saved_mode, &is_found) == ESP_OK && is_found) {
+        s_rec_keep_enabled = saved_mode;
+        ESP_LOGI(TAG, "Restored Rec Keep mode: %s", s_rec_keep_enabled ? "ON" : "OFF");
+    } else {
+        ESP_LOGI(TAG, "No saved Rec Keep mode found, default: OFF");
+    }
+
+    /* Create Rec Keep timer (3 seconds one-shot) */
+    /* Rec Keepタイマー作成（3秒ワンショット） */
+    const esp_timer_create_args_t timer_args = {
+        .callback = &rec_keep_timer_callback,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "rec_keep_timer"
+    };
+
+    esp_err_t ret = esp_timer_create(&timer_args, &s_rec_keep_timer);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to create Rec Keep timer: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "Rec Keep timer created");
     return ESP_OK;
 }
 
@@ -314,11 +365,42 @@ void dji_handle_notification(const uint8_t *data, uint16_t length) {
             if (s_is_recording && !was_recording) {
                 ESP_LOGI(TAG, "Camera started recording");
                 set_dji_state(DJI_STATE_RECORDING);
+
+                /* Clear local stop flag and cancel Rec Keep timer */
+                /* ローカル停止フラグクリア、Rec Keepタイマーキャンセル */
+                s_local_stop_pending = false;
+                if (s_rec_keep_timer != NULL) {
+                    esp_timer_stop(s_rec_keep_timer);
+                }
+
+                /* Save Rec Keep mode state */
+                /* Rec Keepモード状態保存 */
+                storage_save_rec_keep_mode(s_rec_keep_enabled);
+
             } else if (!s_is_recording && was_recording) {
                 ESP_LOGI(TAG, "Camera stopped recording");
                 if (s_dji_state == DJI_STATE_RECORDING) {
                     set_dji_state(DJI_STATE_PAIRED);
                 }
+
+                /* Handle Rec Keep mode */
+                /* Rec Keepモード処理 */
+                if (s_rec_keep_enabled && !s_local_stop_pending) {
+                    /* External stop detected: start 3 second timer */
+                    /* 外部停止検知: 3秒タイマー開始 */
+                    ESP_LOGI(TAG, "External stop detected, starting Rec Keep timer...");
+                    if (s_rec_keep_timer != NULL) {
+                        esp_timer_start_once(s_rec_keep_timer, REC_KEEP_DELAY_MS * 1000); /* config.hの定数使用 */
+                    }
+                } else {
+                    /* Local stop or Rec Keep disabled */
+                    /* ローカル停止またはRec Keep無効 */
+                    s_local_stop_pending = false;
+                }
+
+                /* Save Rec Keep mode state */
+                /* Rec Keepモード状態保存 */
+                storage_save_rec_keep_mode(s_rec_keep_enabled);
             }
         }
     }
@@ -349,6 +431,21 @@ static esp_err_t dji_send_record_command(bool start) {
     }
 
     ESP_LOGI(TAG, "Sending record command: %s", start ? "START" : "STOP");
+
+    /* Update Rec Keep mode state */
+    /* Rec Keepモード状態更新 */
+    if (start) {
+        /* Starting recording: clear local stop flag, cancel timer */
+        /* 録画開始: ローカル停止フラグクリア、タイマーキャンセル */
+        s_local_stop_pending = false;
+        if (s_rec_keep_timer != NULL) {
+            esp_timer_stop(s_rec_keep_timer);
+        }
+    } else {
+        /* Stopping recording: set local stop flag */
+        /* 録画停止: ローカル停止フラグ設定 */
+        s_local_stop_pending = true;
+    }
 
     /* Build record control command */
     /* 録画制御コマンド構築 */
@@ -399,4 +496,36 @@ void dji_reset_state(void) {
     s_waiting_for_response = false;
     s_waiting_for_camera_request = false;
     s_expected_seq = 0;
+    s_local_stop_pending = false;
+
+    /* Cancel Rec Keep timer */
+    /* Rec Keepタイマーキャンセル */
+    if (s_rec_keep_timer != NULL) {
+        esp_timer_stop(s_rec_keep_timer);
+    }
+}
+
+bool dji_is_recording(void) {
+    return s_is_recording;
+}
+
+esp_err_t dji_set_rec_keep_mode(bool enabled) {
+    s_rec_keep_enabled = enabled;
+    ESP_LOGI(TAG, "Rec Keep mode: %s", enabled ? "ON" : "OFF");
+
+    /* Notify callback if registered */
+    /* コールバック登録済みなら通知 */
+    if (s_rec_keep_callback != NULL) {
+        s_rec_keep_callback(enabled);
+    }
+
+    return ESP_OK;
+}
+
+bool dji_is_rec_keep_mode_enabled(void) {
+    return s_rec_keep_enabled;
+}
+
+void dji_set_rec_keep_callback(void (*callback)(bool)) {
+    s_rec_keep_callback = callback;
 }

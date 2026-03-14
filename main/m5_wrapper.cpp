@@ -12,6 +12,7 @@
 /* Button state tracking */
 /* ボタン状態追跡 */
 static bool last_btna_state = false;
+static bool last_btnb_state = false;
 
 /* C wrapper functions */
 /* Cラッパー関数 */
@@ -64,6 +65,20 @@ int M5_BtnA_wasPressed(void) {
     }
 
     last_btna_state = current_state;
+    return 0;
+}
+
+int M5_BtnB_wasPressed(void) {
+    bool current_state = ::M5.BtnB.isPressed();
+
+    /* Detect rising edge (false -> true) */
+    /* 立ち上がりエッジ検出 */
+    if (!last_btnb_state && current_state) {
+        last_btnb_state = current_state;
+        return 1;
+    }
+
+    last_btnb_state = current_state;
     return 0;
 }
 

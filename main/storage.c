@@ -17,6 +17,7 @@ static const char *TAG = "STORAGE";
 #define STORAGE_NAMESPACE "osmo_remote"
 #define KEY_MAC_ADDR "mac_addr"
 #define MAC_ADDR_SIZE 6
+#define KEY_REC_KEEP_MODE "rec_keep_mode"
 
 esp_err_t storage_init(void) {
     ESP_LOGI(TAG, "Initializing storage...");
@@ -139,5 +140,73 @@ esp_err_t storage_clear_paired_device(void) {
         ESP_LOGE(TAG, "Failed to clear paired device: %s", esp_err_to_name(err));
     }
 
+    return err;
+}
+
+esp_err_t storage_save_rec_keep_mode(bool enabled) {
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to open NVS: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    uint8_t value = enabled ? 1 : 0;
+    err = nvs_set_u8(nvs_handle, KEY_REC_KEEP_MODE, value);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to save Rec Keep mode: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+
+    err = nvs_commit(nvs_handle);
+    nvs_close(nvs_handle);
+
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to commit NVS: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    ESP_LOGI(TAG, "Saved Rec Keep mode: %s", enabled ? "ON" : "OFF");
+    return ESP_OK;
+}
+
+esp_err_t storage_get_rec_keep_mode(bool *enabled, bool *is_found) {
+    if (enabled == NULL || is_found == NULL) {
+        ESP_LOGE(TAG, "Invalid arguments");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    *is_found = false;
+    *enabled = false;
+
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open(STORAGE_NAMESPACE, NVS_READONLY, &nvs_handle);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        /* Namespace doesn't exist yet */
+        /* 名前空間が存在しない */
+        return ESP_OK;
+    } else if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to open NVS: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    uint8_t value;
+    err = nvs_get_u8(nvs_handle, KEY_REC_KEEP_MODE, &value);
+
+    if (err == ESP_OK) {
+        *is_found = true;
+        *enabled = (value != 0);
+        ESP_LOGI(TAG, "Found Rec Keep mode: %s", *enabled ? "ON" : "OFF");
+    } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+        /* No Rec Keep mode saved */
+        /* Rec Keepモード未保存 */
+        ESP_LOGI(TAG, "No Rec Keep mode found");
+        err = ESP_OK;
+    } else {
+        ESP_LOGE(TAG, "Failed to read Rec Keep mode: %s", esp_err_to_name(err));
+    }
+
+    nvs_close(nvs_handle);
     return err;
 }

@@ -108,6 +108,43 @@ void dji_reset_state(void);
  */
 esp_err_t dji_toggle_recording(void);
 
+/**
+ * @brief Check if camera is currently recording
+ *        カメラが録画中かチェック
+ *
+ * @return true if recording, false otherwise
+ */
+bool dji_is_recording(void);
+
+/**
+ * @brief Enable or disable Rec Keep mode
+ *        Rec Keepモード設定
+ *
+ * Rec Keep mode automatically restarts recording 3 seconds after
+ * an external stop is detected.
+ * Rec KeepモードON時、外部要因で録画停止を検知した場合3秒後に自動録画再開。
+ *
+ * @param enabled true to enable, false to disable
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t dji_set_rec_keep_mode(bool enabled);
+
+/**
+ * @brief Check if Rec Keep mode is enabled
+ *        Rec Keepモード有効状態取得
+ *
+ * @return true if enabled, false otherwise
+ */
+bool dji_is_rec_keep_mode_enabled(void);
+
+/**
+ * @brief Register callback for Rec Keep mode changes
+ *        Rec Keepモード変化コールバック登録
+ *
+ * @param callback Function to call when Rec Keep mode changes (receives enabled state)
+ */
+void dji_set_rec_keep_callback(void (*callback)(bool enabled));
+
 #ifdef __cplusplus
 }
 #endif
