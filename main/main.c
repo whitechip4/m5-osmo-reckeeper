@@ -536,6 +536,42 @@ void app_main(void) {
             }
         }
 
+        /* Update camera battery display when connected */
+        /* 接続時にカメラバッテリー表示を更新 */
+        if (dji_state == DJI_STATE_PAIRED || dji_state == DJI_STATE_RECORDING) {
+            static uint8_t last_camera_battery = 0xFF;  /* Initialize to impossible value / 不可能な値で初期化 */
+
+            uint8_t current_camera_battery = dji_get_camera_battery_level();
+            if (current_camera_battery != last_camera_battery && current_camera_battery > 0) {
+                /* Clear camera battery area (2nd line of battery display) */
+                /* カメラバッテリーエリアをクリア（バッテリー表示の2行目） */
+                M5_display_fillRect(0, 12, M5_display_width(), 10, TFT_BLACK);
+
+                /* Redraw camera battery (bottom line) */
+                /* カメラバッテリーを再描画（下段） */
+                /* Determine color based on battery level */
+                /* バッテリー残量に応じて色を決定 */
+                uint32_t cam_color;
+                if (current_camera_battery < 10) {
+                    cam_color = TFT_RED;       /* Critical / 危険 */
+                } else if (current_camera_battery < 20) {
+                    cam_color = TFT_YELLOW;    /* Low / 低残量 */
+                } else {
+                    cam_color = TFT_GREEN;     /* Normal / 通常 */
+                }
+
+                char cam_str[16];
+                snprintf(cam_str, sizeof(cam_str), "CAM:%d%%", current_camera_battery);
+
+                M5_display_setTextSize(1);
+                M5Display_setTextDatum(top_left);
+                M5_display_setTextColor(cam_color, TFT_BLACK);
+                M5_display_drawString(cam_str, 2, 12);
+
+                last_camera_battery = current_camera_battery;
+            }
+        }
+
         /* Check button A press */
         /* ボタンA押下チェック */
         extern int M5_BtnA_wasPressed(void);  /* Forward declaration */
