@@ -1,166 +1,166 @@
 # Osmo RecKeeper
 
-M5StickC Plus2 を使用して DJI Osmo360 アクションカメラの録画開始/停止を制御する BLE リモコン。
+BLE remote control for starting/stopping recording on DJI Osmo360 action camera using M5StickC Plus2.
 
-## 概要
+## Overview
 
-M5StickC Plus2 から DJI Osmo360 アクションカメラをREC/STOPするリモコン用ファームウェア。
-外力により録画が停止した場合、自動で再録画を叩く機能がメイン。
-BLEOsmo360の録画が自動で止まってしまう症状があったため、それの対応用。
+Firmware for M5StickC Plus2 to remotely control REC/STOP on DJI Osmo360 action camera. The main feature is automatically restarting recording when it stops due to external factors. This was developed to address an issue where the Osmo360's recording would stop automatically.
 
-### 主な機能
+### Key Features
 
-- **録画制御**: 録画開始/停止を切り替え
-- **Rec Keep モード**: 外部要因で録画が停止した場合、自動録画再開
+- **Recording Control**: Toggle recording start/stop
+- **Rec Keep Mode**: Automatically resume recording when stopped by external factors
 
-## 使用デバイス
+## Hardware Requirements
 
-- **M5StickC Plus2** - ESP32-PICO-V3-02 搭載マイコンモジュール
+- **M5StickC Plus2** - Microcontroller module with ESP32-PICO-V3-02
 
-## 必要環境
+## Software Requirements
 
-### ソフトウェア
+- **ESP-IDF v5.5.3** - Official Espressif framework
+- **M5Unified** - M5Stick control library
 
-- **ESP-IDF v5.5.3** - Espressif の公式フレームワーク
-- **M5Unified** - M5stick制御用
+### Recommended Development Environment
 
-### 推奨開発環境
+- **OS**: Ubuntu 22.04 LTS or later
+- **Target Device**: `/dev/ttyACM0`
 
-- **OS**: Ubuntu 22.04 LTS 以降
-- **ターゲットデバイス**: `/dev/ttyACM0`
-
-## プロジェクト構成
+## Project Structure
 
 ```
 osmo-reckeeper/
-├── main/                    # メインソースコード (C/C++)
-├── components/             # M5Stack 公式ライブラリ (git submodule)
-│   ├── M5Unified/          # ハードウェア抽象化レイヤー (v0.2.13)
-│   └── M5GFX/             # LCD/グラフィック描画ライブラリ (v0.2.19)
-├── reference/             # DJI 公式デモ (git submodule)
-│   └── OsmoDemo/          # 参考実装 エージェントで読み込む用
-├── tools/                 # ビルド・フラッシュ・モニタスクリプト
-│   ├── build.sh          # ビルドのみ
-│   ├── flash.sh          # ビルドとフラッシュ
-│   └── monitor.sh        # シリアルモニタ
-├── CMakeLists.txt        # ルートビルド設定
-├── sdkconfig             # ESP-IDF 設定ファイル
-└── README.md             # 本ファイル
+├── main/                    # Main source code (C/C++)
+├── components/              # M5Stack official libraries (git submodule)
+│   ├── M5Unified/           # Hardware abstraction layer (v0.2.13)
+│   └── M5GFX/              # LCD/graphics drawing library (v0.2.19)
+├── reference/              # DJI official demo (git submodule)
+│   └── OsmoDemo/           # Reference implementation for agent analysis
+├── tools/                  # Build, flash, and monitor scripts
+│   ├── build.sh           # Build only
+│   ├── flash.sh           # Build and flash
+│   └── monitor.sh         # Serial monitor
+├── CMakeLists.txt         # Root build configuration
+└── sdkconfig              # ESP-IDF configuration file
 ```
 
-## セットアップ手順
+## Setup Instructions
 
-### 1. ESP-IDF 環境構築
+### 1. ESP-IDF Environment Setup
 
-ESP-IDF v5.5.3 をインストールしていない場合は、公式ドキュメントに従ってセットアップしてください：
+If you haven't installed ESP-IDF v5.5.3, follow the official documentation to set it up:
 
 ```bash
-# ESP-IDF のダウンロードとインストール
+# Download and install ESP-IDF
 git clone --recursive https://github.com/espressif/esp-idf.git ~/esp/esp-idf
 cd ~/esp/esp-idf
 git checkout v5.5.3
 ./install.sh esp32
 ```
 
-### 2. リポジトリのクローンとサブモジュール初期化
+### 2. Clone Repository and Initialize Submodules
 
 ```bash
-# リポジトリをクローン
+# Clone repository
 git clone <repository-url>
 cd osmo-reckeeper
 
-# サブモジュールを初期化して更新
+# Initialize and update submodules
 git submodule update --init --recursive
 ```
 
-### 3. ESP-IDF 環境変数の設定
+### 3. Set ESP-IDF Environment Variables
 
 ```bash
-# ESP-IDF 環境変数を有効化
+# Enable ESP-IDF environment variables
 . ~/esp/esp-idf/export.sh
 ```
 
-## ビルドと書き込み
+## Build & Flash
 
-### ビルドのみ
+### Build Only
 
 ```bash
 ./tools/build.sh
 ```
 
-### ビルドとフラッシュ
+### Build and Flash
 
 ```bash
 ./tools/flash.sh
 ```
 
-### シリアルモニタ
+### Serial Monitor
 
 ```bash
 ./tools/monitor.sh
 ```
 
-終了するには `Ctrl+]` を押してください。
+Press `Ctrl+]` to exit.
 
-### 手動ビルド（ESP-IDF コマンド）
+### Manual Build (ESP-IDF Commands)
 
 ```bash
-# ターゲット設定
+# Set target
 idf.py set-target esp32
 
-# ビルド
+# Build
 idf.py build
 
-# フラッシュ
+# Flash
 idf.py -p /dev/ttyACM0 flash
 
-# モニタ
+# Monitor
 idf.py -p /dev/ttyACM0 monitor
 
-# ビルド+フラッシュ+モニタ（一括実行）
+# Build+flash+monitor (all at once)
 idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-## 使用方法
+## Usage
 
-### ボタン操作
+### Button Operations
 
-| ボタン | 操作 | 機能 |
-|--------|------|------|
-| **Btn A** | 単押し | 録画開始/停止の切り替え |
-| **Btn B** | 単押し | Rec Keep モードの ON/OFF 切り替え |
-| **PWR** | 単押し後離す | デバイスをリセット |
-| **PWR** | 3秒長押し | 電源 OFF（カウントダウン中に離すとリセット） |
+| Button | Operation | Function |
+|--------|-----------|----------|
+| **Btn A** | Single press | Toggle recording start/stop |
+| **Btn B** | Single press | Toggle Rec Keep mode ON/OFF |
+| **PWR** | Press and release | Reset device |
+| **PWR** | Long press (3s) | Power OFF (release during countdown to reset) |
 
-### Rec Keep モード
+### Rec Keep Mode
 
-Rec Keep モードが ON の時、外部要因（SDカードエラー等）で録画が停止した場合、自動的に録画を再開します。本デバイスからの停止操作では再開しません。
+When Rec Keep Mode is ON, recording will automatically resume if it stops due to external factors (e.g., SD card error). Recording will NOT resume when stopped manually from this device.
 
-### LCD 表示
+### LCD Display
 
-- **READY**: `PUSH TO Pairing` - ペアリング待機中
-- **ペアリング中**: `Finding Device... (デバイスID)`
-- **録画停止中**: `■STOP`（緑色）/ `Press to start`
-- **録画中**: `●REC`（赤色）/ 録画時間（秒）
-- **Rec Keep 状態**: 右上に `RK: ON`（赤色）/ `RK: OFF`（緑色）を常時表示
-- **PWR ボタン案内**: `Press 3s to PWR OFF`（黄色）/ `Release to reset`（白色）
-- **PWR カウントダウン**: `3`→`2`→`1`（赤色）/ `Release to reset`（白色）
-- **電源 OFF**: `BYE`（白色）
+- **READY**: `PUSH TO Pairing` - Waiting for pairing
+- **Pairing**: `Finding Device... (device ID)`
+- **Recording Stopped**: `■STOP` (green) / `Press to start`
+- **Recording**: `●REC` (red) / Recording time (seconds)
+- **Rec Keep Status**: `RK: ON` (red) / `RK: OFF` (green) displayed in top-right corner
+- **PWR Button Guide**: `Press 3s to PWR OFF` (yellow) / `Release to reset` (white)
+- **PWR Countdown**: `3`→`2`→`1` (red) / `Release to reset` (white)
+- **Power OFF**: `BYE` (white)
 
-## 参考資料
+## References
 
-- [DJI Osmo GPS Controller Demo](https://github.com/dji-sdk/Osmo-GPS-Controller-Demo) - DJI 公式参考実装（`reference/OsmoDemo/` にサブモジュールとして含まれています）
-- [M5Unified](https://github.com/m5stack/M5Unified) - M5Stack 公式ハードウェア抽象化レイヤー
-- [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/en/v5.5.3/esp32/) - Espressif 公式ドキュメント
+- [DJI Osmo GPS Controller Demo](https://github.com/dji-sdk/Osmo-GPS-Controller-Demo) - DJI official reference implementation (included as submodule in `reference/OsmoDemo/`)
+- [M5Unified](https://github.com/m5stack/M5Unified) - M5Stack official hardware abstraction layer
+- [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/en/v5.5.3/esp32/) - Official Espressif documentation
 
-## ライセンス
+## License
 
 **MIT License**
 
-本プロジェクトは独自実装ですが、DJI プロトコルの使用については DJI の EULA に準拠してください。
+This project is an original implementation. Please comply with DJI's EULA regarding the use of DJI protocols.
 
-### 依存ライブラリのライセンス
+### Dependency Library Licenses
 
 - **M5Unified**: MIT License
 - **M5GFX**: MIT License
 - **ESP-IDF**: Apache 2.0 License
+
+## Development Tools
+
+- Claude Code
+- GLM4.7
