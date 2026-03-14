@@ -1,6 +1,6 @@
 idf_component_register(
     SRCS "main.c" "ble_simple.c" "m5_wrapper.cpp"
-         "dji_protocol.c"
+         "dji_protocol.c" "storage.c"
          "protocol/dji_protocol_parser.c"
          "protocol/crc16.c" "protocol/crc32.c"
     INCLUDE_DIRS "." "protocol"

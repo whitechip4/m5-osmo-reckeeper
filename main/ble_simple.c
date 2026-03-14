@@ -9,6 +9,8 @@
 
 #include <string.h>
 #include "ble_simple.h"
+#include "storage.h"
+#include "dji_protocol.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_log.h"
@@ -299,6 +301,50 @@ esp_err_t ble_write(const uint8_t *data, uint16_t length) {
     }
 
     return ret;
+}
+
+esp_err_t ble_connect_to_mac(const uint8_t *mac_addr) {
+    if (mac_addr == NULL) {
+        ESP_LOGE(TAG, "MAC address is NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (s_current_state != BLE_STATE_IDLE) {
+        ESP_LOGW(TAG, "Cannot connect: not in IDLE state (current=%d)", s_current_state);
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Connecting to saved device: %02X:%02X:%02X:%02X:%02X:%02X",
+             mac_addr[0], mac_addr[1], mac_addr[2],
+             mac_addr[3], mac_addr[4], mac_addr[5]);
+
+    /* Set target address and connecting flag */
+    /* ターゲットアドレスと接続中フラグ設定 */
+    memcpy(s_target_addr, mac_addr, sizeof(esp_bd_addr_t));
+    s_is_connecting = true;
+
+    /* Initiate connection */
+    /* 接続開始 */
+    set_state(BLE_STATE_CONNECTING);
+    esp_ble_gattc_open(s_connection.gattc_if,
+                       s_target_addr,
+                       BLE_ADDR_TYPE_PUBLIC,
+                       true);
+
+    return ESP_OK;
+}
+
+esp_err_t ble_connect_or_scan(void) {
+    uint8_t saved_mac[6];
+    bool is_found;
+
+    if (storage_get_paired_device(saved_mac, &is_found) == ESP_OK && is_found) {
+        ESP_LOGI(TAG, "Found paired device, attempting reconnection...");
+        return ble_connect_to_mac(saved_mac);
+    } else {
+        ESP_LOGI(TAG, "No paired device, starting scan...");
+        return ble_start_scanning_and_connect();
+    }
 }
 
 /* -------------------------
@@ -597,6 +643,10 @@ static void gattc_event_handler(esp_gattc_cb_event_t event,
         s_is_connecting = false;
         ESP_LOGI(TAG, "Disconnected, reason=0x%x", param->disconnect.reason);
         set_state(BLE_STATE_IDLE);
+
+        /* Reset DJI protocol state */
+        /* DJIプロトコル状態リセット */
+        dji_reset_state();
         break;
 
     case ESP_GATTC_NOTIFY_EVT:

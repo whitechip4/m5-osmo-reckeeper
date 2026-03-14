@@ -11,6 +11,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "dji_protocol.h"
+#include "storage.h"
 #include "protocol/dji_protocol_parser.h"
 #include "protocol/dji_protocol_data_structures.h"
 #include "ble_simple.h"
@@ -62,7 +63,7 @@ esp_err_t dji_protocol_init(void) {
     return ESP_OK;
 }
 
-esp_err_t dji_start_pairing(void) {
+esp_err_t dji_start_pairing(bool is_first_pairing) {
     const ble_connection_t *conn = ble_get_connection();
     if (conn == NULL || !conn->is_connected) {
         ESP_LOGE(TAG, "Not connected to BLE device");
@@ -70,7 +71,7 @@ esp_err_t dji_start_pairing(void) {
         return ESP_ERR_INVALID_STATE;
     }
 
-    ESP_LOGI(TAG, "Starting pairing...");
+    ESP_LOGI(TAG, "Starting pairing... (is_first_pairing=%d)", is_first_pairing);
     set_dji_state(DJI_STATE_PAIRING);
 
     uint16_t seq = get_next_seq();
@@ -84,10 +85,12 @@ esp_err_t dji_start_pairing(void) {
         .mac_addr_len = 6,
         .fw_version = 0,
         .conidx = 0,
-        .verify_mode = 1,  /* First pairing / 初回ペアリング */
+        .verify_mode = is_first_pairing ? 1 : 0,  /* 1=first pairing, 0=reconnection */
         .verify_data = 0,
         .reserved = {0}
     };
+
+    ESP_LOGI(TAG, "STEP1: Sending connection request with verify_mode=%u", conn_req.verify_mode);
 
     /* Copy MAC address from BLE connection */
     /* BLE接続からMACアドレスコピー */
@@ -254,6 +257,13 @@ void dji_handle_notification(const uint8_t *data, uint16_t length) {
                                     ESP_LOGI(TAG, "Pairing successful!");
                                     set_dji_state(DJI_STATE_PAIRED);
 
+                                    /* Save paired device MAC address */
+                                    /* ペアリング済みデバイスのMACアドレスを保存 */
+                                    const ble_connection_t *conn = ble_get_connection();
+                                    if (conn != NULL) {
+                                        storage_save_paired_device(conn->remote_bda);
+                                    }
+
                                     /* Auto-subscribe to status */
                                     /* 状態購読を自動開始 */
                                     dji_subscribe_status();
@@ -320,4 +330,14 @@ dji_state_t dji_get_state(void) {
 
 void dji_set_state_callback(void (*callback)(dji_state_t)) {
     s_state_callback = callback;
+}
+
+void dji_reset_state(void) {
+    ESP_LOGI(TAG, "Resetting DJI protocol state...");
+    s_dji_state = DJI_STATE_IDLE;
+    s_seq = 0;
+    s_is_recording = false;
+    s_waiting_for_response = false;
+    s_waiting_for_camera_request = false;
+    s_expected_seq = 0;
 }

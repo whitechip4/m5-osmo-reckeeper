@@ -49,9 +49,11 @@ esp_err_t dji_protocol_init(void);
  * @brief Start pairing with Osmo360 (blocking call, timeout 35 seconds)
  *        Osmo360とのペアリング開始（ブロッキング呼び出し、タイムアウト35秒）
  *
+ * @param is_first_pairing true for first pairing (verify_mode=1), false for reconnection (verify_mode=0)
+ *                         初回ペアリング時はtrue (verify_mode=1)、再接続時はfalse (verify_mode=0)
  * @return ESP_OK on success, error code otherwise
  */
-esp_err_t dji_start_pairing(void);
+esp_err_t dji_start_pairing(bool is_first_pairing);
 
 /**
  * @brief Subscribe to camera status updates
@@ -85,6 +87,15 @@ dji_state_t dji_get_state(void);
  * @param callback Function to call on state change / 状態変化時に呼ばれる関数
  */
 void dji_set_state_callback(void (*callback)(dji_state_t new_state));
+
+/**
+ * @brief Reset DJI protocol state
+ *        DJIプロトコル状態リセット
+ *
+ * Call this when BLE connection is lost to reset state machine.
+ * BLE接続が失われたときに呼び出して状態マシンをリセットする。
+ */
+void dji_reset_state(void);
 
 #ifdef __cplusplus
 }

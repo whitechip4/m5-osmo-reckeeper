@@ -111,4 +111,26 @@ void ble_set_notify_callback(ble_notify_callback_t callback);
  */
 esp_err_t ble_write(const uint8_t *data, uint16_t length);
 
+/**
+ * @brief Connect to specific MAC address
+ * 特定のMACアドレスに接続
+ *
+ * @param mac_addr 6-byte MAC address
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t ble_connect_to_mac(const uint8_t *mac_addr);
+
+/**
+ * @brief Connect to paired device or start scanning
+ * ペアリング済みデバイスに接続、またはスキャン開始
+ *
+ * If a paired device is saved in NVS, attempt to reconnect to it.
+ * Otherwise, start scanning for a new device.
+ * ペアリング済みデバイスがNVSに保存されている場合は再接続を試みます。
+ * それ以外の場合は新規デバイスのスキャンを開始します。
+ *
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t ble_connect_or_scan(void);
+
 #endif /* __BLE_SIMPLE_H__ */

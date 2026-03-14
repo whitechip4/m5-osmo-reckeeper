@@ -39,6 +39,7 @@ void M5_display_drawString(const char *string, int x, int y);
 
 #include "ble_simple.h"
 #include "dji_protocol.h"
+#include "storage.h"
 
 static const char *TAG = "main";
 
@@ -117,7 +118,8 @@ static void ble_state_callback(ble_state_t new_state) {
     /* BLE接続時に自動ペアリング開始 */
     if (new_state == BLE_STATE_CONNECTED) {
         ESP_LOGI(TAG, "BLE connected, starting DJI pairing...");
-        dji_start_pairing();
+        bool is_first_pairing = !storage_is_paired();
+        dji_start_pairing(is_first_pairing);
     }
 }
 
@@ -148,9 +150,19 @@ void app_main(void) {
     /* 画面クリア */
     M5_display_fillScreen(TFT_BLACK);
 
+    /* Initialize storage */
+    /* ストレージ初期化 */
+    esp_err_t ret = storage_init();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Storage initialization failed: %s", esp_err_to_name(ret));
+        update_lcd("STG ERROR", TFT_RED);
+        return;
+    }
+    ESP_LOGI(TAG, "Storage initialized");
+
     /* Initialize BLE stack */
     /* BLEスタック初期化 */
-    esp_err_t ret = ble_init();
+    ret = ble_init();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "BLE initialization failed: %s", esp_err_to_name(ret));
         update_lcd("BLE ERROR", TFT_RED);
@@ -199,10 +211,10 @@ void app_main(void) {
             ble_state_t current_state = ble_get_state();
 
             if (current_state == BLE_STATE_IDLE) {
-                ESP_LOGI(TAG, "Button pressed, starting BLE scan...");
-                ret = ble_start_scanning_and_connect();
+                ESP_LOGI(TAG, "Button pressed, connecting...");
+                ret = ble_connect_or_scan();
                 if (ret != ESP_OK) {
-                    ESP_LOGE(TAG, "Failed to start scan: %s", esp_err_to_name(ret));
+                    ESP_LOGE(TAG, "Failed to connect: %s", esp_err_to_name(ret));
                 }
             } else if (current_state == BLE_STATE_CONNECTED) {
                 ESP_LOGI(TAG, "Button pressed, disconnecting...");
