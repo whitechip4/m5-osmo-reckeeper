@@ -332,6 +332,65 @@ void dji_set_state_callback(void (*callback)(dji_state_t)) {
     s_state_callback = callback;
 }
 
+/* Internal helper: Send recording command */
+/* 内部ヘルパー: 録画コマンド送信 */
+static esp_err_t dji_send_record_command(bool start) {
+    const ble_connection_t *conn = ble_get_connection();
+    if (conn == NULL || !conn->is_connected) {
+        ESP_LOGE(TAG, "Not connected to BLE device");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    /* Check if paired */
+    /* ペアリング確認 */
+    if (s_dji_state != DJI_STATE_PAIRED && s_dji_state != DJI_STATE_RECORDING) {
+        ESP_LOGE(TAG, "Not paired with camera (state=%d)", s_dji_state);
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    ESP_LOGI(TAG, "Sending record command: %s", start ? "START" : "STOP");
+
+    /* Build record control command */
+    /* 録画制御コマンド構築 */
+    record_control_command_frame_t record_cmd = {
+        .device_id = 0x33FF0000,
+        .record_ctrl = start ? 0x00 : 0x01,
+        .reserved = {0}
+    };
+
+    /* Create protocol frame */
+    /* プロトコルフレーム作成 */
+    size_t frame_length;
+    uint8_t *frame = protocol_create_frame(0x1D, 0x03, 0x01, &record_cmd,
+                                           get_next_seq(), &frame_length);
+    if (frame == NULL) {
+        ESP_LOGE(TAG, "Failed to create record control frame");
+        return ESP_FAIL;
+    }
+
+    /* Send via BLE */
+    /* BLE経由で送信 */
+    esp_err_t ret = ble_write(frame, frame_length);
+    free(frame);
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to send record command: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "Record command sent successfully");
+    return ESP_OK;
+}
+
+/* Public API: Toggle recording */
+/* パブリックAPI: 録画切り替え */
+esp_err_t dji_toggle_recording(void) {
+    /* Start recording if stopped, stop if recording */
+    /* 録画停止中なら開始、録画中なら停止 */
+    bool should_start = !s_is_recording;
+    return dji_send_record_command(should_start);
+}
+
 void dji_reset_state(void) {
     ESP_LOGI(TAG, "Resetting DJI protocol state...");
     s_dji_state = DJI_STATE_IDLE;

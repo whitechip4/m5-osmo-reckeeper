@@ -68,4 +68,19 @@ typedef struct __attribute__((packed)) {
     uint8_t camera_bat_percentage; /* Camera battery percentage: 0-100% / カメラバッテリー残量 */
 } camera_status_push_command_frame_t;
 
+/* Recording control command structure */
+/* 録画制御コマンド構造体 */
+typedef struct __attribute__((packed)) {
+    uint32_t device_id;            /* Device ID / デバイスID */
+    uint8_t record_ctrl;           /* Recording control: 0 - Start, 1 - Stop */
+                                   /* 拍録制御：0 - 開始, 1 - 停止 */
+    uint8_t reserved[4];           /* Reserved field / 予約フィールド */
+} record_control_command_frame_t;
+
+/* Recording control response structure */
+/* 録画制御レスポンス構造体 */
+typedef struct __attribute__((packed)) {
+    uint8_t ret_code;              /* Return code / 返り値コード */
+} record_control_response_frame_t;
+
 #endif /* DJI_PROTOCOL_DATA_STRUCTURES_H */

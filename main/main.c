@@ -208,19 +208,38 @@ void app_main(void) {
         /* ボタンA押下チェック */
         extern int M5_BtnA_wasPressed(void);  /* Forward declaration */
         if (M5_BtnA_wasPressed()) {
-            ble_state_t current_state = ble_get_state();
+            ble_state_t ble_state = ble_get_state();
+            dji_state_t dji_state = dji_get_state();
 
-            if (current_state == BLE_STATE_IDLE) {
+            if (ble_state == BLE_STATE_IDLE) {
+                /* Not connected: Start BLE connection */
+                /* 未接続: BLE接続開始 */
                 ESP_LOGI(TAG, "Button pressed, connecting...");
                 ret = ble_connect_or_scan();
                 if (ret != ESP_OK) {
                     ESP_LOGE(TAG, "Failed to connect: %s", esp_err_to_name(ret));
                 }
-            } else if (current_state == BLE_STATE_CONNECTED) {
-                ESP_LOGI(TAG, "Button pressed, disconnecting...");
-                ble_disconnect();
+            } else if (ble_state == BLE_STATE_CONNECTED) {
+                /* Check DJI state for appropriate action */
+                /* DJI状態に応じて適切なアクションを実行 */
+
+                if (dji_state == DJI_STATE_PAIRED || dji_state == DJI_STATE_RECORDING) {
+                    /* Paired: Toggle recording */
+                    /* ペアリング済み: 録画開始/停止 */
+                    ESP_LOGI(TAG, "Button pressed, toggling recording...");
+                    ret = dji_toggle_recording();
+                    if (ret != ESP_OK) {
+                        ESP_LOGE(TAG, "Failed to toggle recording: %s", esp_err_to_name(ret));
+                    }
+                } else {
+                    /* Not paired: Disconnect */
+                    /* 未ペアリング: 切断 */
+                    ESP_LOGI(TAG, "Button pressed, disconnecting...");
+                    ble_disconnect();
+                }
             } else {
-                ESP_LOGW(TAG, "Button pressed but not in appropriate state (current=%d)", current_state);
+                ESP_LOGW(TAG, "Button pressed but not in appropriate state (BLE=%d, DJI=%d)",
+                         ble_state, dji_state);
             }
         }
 

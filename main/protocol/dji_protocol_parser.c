@@ -151,6 +151,8 @@ uint8_t* protocol_create_frame(uint8_t cmd_set, uint8_t cmd_id,
         case 0x1D: /* Camera control */
             if (cmd_id == 0x05) { /* Status subscription */
                 data_length = sizeof(camera_status_subscription_command_frame_t);
+            } else if (cmd_id == 0x03) { /* Record control */
+                data_length = sizeof(record_control_command_frame_t);
             } else {
                 ESP_LOGE(TAG, "Unsupported CmdID 0x%02X for CmdSet 0x1D", cmd_id);
                 return NULL;

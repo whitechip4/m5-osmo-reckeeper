@@ -97,6 +97,17 @@ void dji_set_state_callback(void (*callback)(dji_state_t new_state));
  */
 void dji_reset_state(void);
 
+/**
+ * @brief Toggle recording state
+ *        録画状態を切り替え
+ *
+ * Starts recording if currently stopped, stops if currently recording.
+ * 録画停止中なら開始、録画中なら停止。
+ *
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t dji_toggle_recording(void);
+
 #ifdef __cplusplus
 }
 #endif
