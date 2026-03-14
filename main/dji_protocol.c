@@ -33,6 +33,10 @@ static int64_t s_recording_start_time = 0; /* Recording start time (microseconds
 static bool s_use_internal_timer = false;  /* Use internal timer flag / 内部タイマー使用フラグ */
 static uint32_t s_camera_device_id = 0;    /* Camera device ID / カメラデバイスID */
 
+/* Camera battery tracking */
+/* カメラバッテリー追跡 */
+static uint8_t s_camera_battery_level = 0; /* 0-100%, 0 means unavailable / 0-100%, 0は利用不可 */
+
 /* Pairing state variables */
 /* ペアリング状態変数 */
 static bool s_waiting_for_response = false;
@@ -360,6 +364,10 @@ void dji_handle_notification(const uint8_t *data, uint16_t length) {
             /* Extract recording time */
             s_recording_time = status->record_time;
 
+            /* Extract camera battery level */
+            /* カメラバッテリー残量を抽出 */
+            s_camera_battery_level = status->camera_bat_percentage;
+
             /* Log status periodically (not every time to reduce spam) */
             /* 定期的に状態をログ（スパム抑制） */
             static uint32_t last_log_time = 0;
@@ -580,4 +588,10 @@ uint16_t dji_get_recording_time(void) {
 
 uint32_t dji_get_device_id(void) {
     return s_camera_device_id;
+}
+
+/* Get camera battery level */
+/* カメラバッテリー残量を取得 */
+uint8_t dji_get_camera_battery_level(void) {
+    return s_camera_battery_level;
 }

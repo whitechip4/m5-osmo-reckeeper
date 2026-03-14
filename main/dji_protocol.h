@@ -162,6 +162,15 @@ uint16_t dji_get_recording_time(void);
  */
 uint32_t dji_get_device_id(void);
 
+/**
+ * @brief Get camera battery level
+ * @return Battery level (0-100%), 0 means unavailable
+ *
+ * @brief カメラバッテリー残量を取得
+ * @return バッテリー残量（0-100%）、0は利用不可
+ */
+uint8_t dji_get_camera_battery_level(void);
+
 #ifdef __cplusplus
 }
 #endif

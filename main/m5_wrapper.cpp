@@ -128,4 +128,8 @@ void M5_Power_off(void) {
     ::M5.Power.powerOff();
 }
 
+int M5_Power_getBatteryLevel(void) {
+    return (int)::M5.Power.getBatteryLevel();
+}
+
 } /* extern "C" */

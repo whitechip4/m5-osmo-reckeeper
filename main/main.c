@@ -42,6 +42,10 @@ int M5_BtnPWR_isPressed(void);
 void M5_Power_restart(void);
 void M5_Power_off(void);
 
+/* Battery functions */
+/* バッテリー関連関数 */
+int M5_Power_getBatteryLevel(void);
+
 #ifdef __cplusplus
 }
 #endif
@@ -138,6 +142,62 @@ static void format_device_id(uint32_t device_id, char *buffer, size_t size) {
     }
 }
 
+/* Draw battery indicators in top-left corner */
+/* 左上にバッテリー表示を描画（デバイス・カメラ） */
+static void draw_battery_indicator(void) {
+    /* Get device battery level */
+    /* デバイスバッテリー残量を取得 */
+    int device_battery = M5_Power_getBatteryLevel();
+
+    /* Get camera battery level (only available when connected) */
+    /* カメラバッテリー残量を取得（接続時のみ利用可能） */
+    int camera_battery = (dji_get_state() == DJI_STATE_PAIRED ||
+                         dji_get_state() == DJI_STATE_RECORDING ||
+                         dji_get_state() == DJI_STATE_RESTARTING) ?
+                         dji_get_camera_battery_level() : 0;
+
+    /* Draw device battery (top line) */
+    /* デバイスバッテリーを描画（上段） */
+    M5_display_setTextSize(1);
+    M5Display_setTextDatum(top_left);
+
+    if (device_battery < 0) {
+        /* Device battery error / デバイスバッテリーエラー */
+        M5_display_setTextColor(TFT_RED, TFT_BLACK);
+        M5_display_drawString("DEV:ERR", 2, 2);
+    } else {
+        /* Determine color based on battery level */
+        /* バッテリー残量に応じて色を決定 */
+        uint32_t color = (device_battery < 20) ? TFT_RED : TFT_GREEN;
+        char dev_str[16];
+        snprintf(dev_str, sizeof(dev_str), "DEV:%d%%", device_battery);
+
+        M5_display_setTextColor(color, TFT_BLACK);
+        M5_display_drawString(dev_str, 2, 2);
+    }
+
+    /* Draw camera battery (bottom line, only when connected and valid) */
+    /* カメラバッテリーを描画（下段、接続時かつ有効な場合のみ） */
+    if (camera_battery > 0) {
+        /* Determine color based on battery level */
+        /* バッテリー残量に応じて色を決定 */
+        uint32_t cam_color;
+        if (camera_battery < 10) {
+            cam_color = TFT_RED;       /* Critical / 危険 */
+        } else if (camera_battery < 20) {
+            cam_color = TFT_YELLOW;    /* Low / 低残量 */
+        } else {
+            cam_color = TFT_GREEN;     /* Normal / 通常 */
+        }
+
+        char cam_str[16];
+        snprintf(cam_str, sizeof(cam_str), "CAM:%d%%", camera_battery);
+
+        M5_display_setTextColor(cam_color, TFT_BLACK);
+        M5_display_drawString(cam_str, 2, 12);  /* 10 pixels below device battery / デバイスバッテリーの10ピクセル下 */
+    }
+}
+
 /* LCD update function */
 /* LCD更新関数 */
 static void update_lcd(const char *text, uint32_t color) {
@@ -180,6 +240,10 @@ static void ble_state_callback(ble_state_t new_state) {
         bool is_first_pairing = !storage_is_paired();
         dji_start_pairing(is_first_pairing);
     }
+
+    /* Draw battery indicator in top-left corner */
+    /* 左上にバッテリー表示を描画 */
+    draw_battery_indicator();
 }
 
 /* DJI state change callback */
@@ -332,6 +396,10 @@ static void dji_state_callback(dji_state_t new_state) {
         M5_display_setTextColor(TFT_GREEN, TFT_BLACK);
         M5_display_drawString("RecKeep:OFF", M5_display_width() - 2, 2);
     }
+
+    /* Draw battery indicator in top-left corner */
+    /* 左上にバッテリー表示を描画 */
+    draw_battery_indicator();
 }
 
 /* Rec Keep mode change callback */
@@ -410,6 +478,10 @@ void app_main(void) {
     /* 初期状態表示 */
     display_multiline("PUSH TO", "Pairing", TFT_WHITE, TFT_WHITE, 2, 2);
     ESP_LOGI(TAG, "System ready. Press BtnA to scan for DJI Osmo360.");
+
+    /* Draw battery indicator */
+    /* バッテリー表示を描画 */
+    draw_battery_indicator();
 
     /* Main event loop */
     /* メインイベントループ */
@@ -548,6 +620,10 @@ void app_main(void) {
             M5_display_setTextSize(1);
             M5_display_drawString("Release to reset", x, y_line2);
 
+            /* Draw battery indicator */
+            /* バッテリー表示を描画 */
+            draw_battery_indicator();
+
             /* Small delay to show guide */
             /* 案内表示のための小さな遅延 */
             vTaskDelay(pdMS_TO_TICKS(500));
@@ -575,6 +651,10 @@ void app_main(void) {
                 M5_display_setTextSize(1);
                 M5_display_setTextColor(TFT_WHITE, TFT_BLACK);
                 M5_display_drawString("Release to reset", x, y_line2);
+
+                /* Draw battery indicator */
+                /* バッテリー表示を描画 */
+                draw_battery_indicator();
 
                 /* Check if button is still pressed during countdown */
                 /* カウントダウン中にボタンが押されているかチェック */
@@ -607,6 +687,10 @@ void app_main(void) {
             M5Display_setTextDatum(top_center);
             M5_display_setTextSize(2);
             M5_display_drawString("BYE", x, y_line1);
+
+            /* Draw battery indicator */
+            /* バッテリー表示を描画 */
+            draw_battery_indicator();
 
             /* Ensure minimum display time */
             /* 最小表示時間確保 */
