@@ -53,6 +53,8 @@ int M5_Power_getBatteryLevel(void);
 #include "ble_simple.h"
 #include "dji_protocol.h"
 #include "storage.h"
+#include "gps_module.h"
+#include "config.h"
 
 static const char *TAG = "main";
 
@@ -99,6 +101,41 @@ static const state_display_t dji_state_display[] = {
     [DJI_STATE_FAILED]     = {"PAIR ERR", TFT_RED}
 };
 
+/* GPS status display strings and colors */
+/* GPS状態表示文字列と色 */
+static const state_display_t gps_status_display[] = {
+    [GPS_STATUS_NULL]   = {"GPS:NULL", TFT_YELLOW},
+    [GPS_STATUS_SEARCH] = {"GPS:SEARCH", TFT_CYAN},
+    [GPS_STATUS_OK]     = {"GPS:OK", TFT_GREEN}
+};
+
+/* Draw GPS status in top-center area */
+/* 上部中央にGPS状態を描画 */
+static void draw_gps_status(void) {
+    /* Get current GPS status */
+    /* GPS状態を取得 */
+    gps_status_t current_gps_status = gps_get_status();
+
+    /* Clear GPS status area (top center) */
+    /* GPS状態エリアをクリア（中央上部） */
+    int center_x = M5_display_width() / 2;
+    int y_gps = 2;  /* Top position / 上部位置 */
+
+    /* Clear area for "GPS:XXXXXX" (max ~10 chars) */
+    /* "GPS:XXXXXX"（最大約10文字）のエリアをクリア */
+    M5_display_fillRect(center_x - 32, y_gps, 64, 10, TFT_BLACK);
+
+    /* Draw GPS status */
+    /* GPS状態を描画 */
+    const char *gps_text = gps_status_display[current_gps_status].text;
+    uint32_t gps_color = gps_status_display[current_gps_status].color;
+
+    M5_display_setTextColor(gps_color, TFT_BLACK);
+    M5Display_setTextDatum(top_center);
+    M5_display_setTextSize(1);
+    M5_display_drawString(gps_text, center_x, y_gps);
+}
+
 /* Multiline display function */
 /* マルチライン表示関数 */
 static void display_multiline(const char *line1, const char *line2,
@@ -122,6 +159,10 @@ static void display_multiline(const char *line1, const char *line2,
         M5_display_setTextSize(size2);
         M5_display_drawString(line2, center_x, y2);
     }
+
+    /* Draw GPS status after screen update */
+    /* 画面更新後にGPS状態を描画 */
+    draw_gps_status();
 }
 
 /* Recording time formatter (MM:SS) */
@@ -322,6 +363,10 @@ static void dji_state_callback(dji_state_t new_state) {
                     M5_display_drawString(osmo_id_buf, center_x, y_line3);
                 }
             }
+
+            /* Draw GPS status after screen update */
+            /* 画面更新後にGPS状態を描画 */
+            draw_gps_status();
             break;
 
         case DJI_STATE_RECORDING:
@@ -365,6 +410,10 @@ static void dji_state_callback(dji_state_t new_state) {
                     M5_display_drawString(osmo_id_buf, center_x, y_line3);
                 }
             }
+
+            /* Draw GPS status after screen update */
+            /* 画面更新後にGPS状態を描画 */
+            draw_gps_status();
             break;
 
         case DJI_STATE_RESTARTING:
@@ -482,6 +531,18 @@ void app_main(void) {
     /* Draw battery indicator */
     /* バッテリー表示を描画 */
     draw_battery_indicator();
+
+    /* Initialize GPS module */
+    /* GPSモジュール初期化 */
+    ret = gps_init();
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "GPS initialization failed: %s", esp_err_to_name(ret));
+    }
+    ESP_LOGI(TAG, "GPS module initialized");
+
+    /* Draw initial GPS status */
+    /* 初期GPS状態を描画 */
+    draw_gps_status();
 
     /* Main event loop */
     /* メインイベントループ */
@@ -608,6 +669,29 @@ void app_main(void) {
                 M5_display_drawString(sd_str, 2, 22);
 
                 last_sd_remaining_mb = current_sd_mb;
+            }
+        }
+
+        /* Update GPS polling and display */
+        /* GPSポーリングと表示更新 */
+        {
+            static gps_status_t last_gps_status = GPS_STATUS_NULL + 10; /* Initialize to impossible value */
+            static uint32_t last_gps_poll_time = 0;
+
+            /* Poll GPS at 2Hz (500ms interval) */
+            /* GPSを2Hz（500ms間隔）でポーリング */
+            uint32_t current_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+            if (current_time - last_gps_poll_time >= GPS_POLL_INTERVAL_MS) {
+                gps_poll();
+                last_gps_poll_time = current_time;
+            }
+
+            /* Update GPS status display when status changes */
+            /* GPS状態が変化したら表示更新 */
+            gps_status_t current_gps_status = gps_get_status();
+            if (current_gps_status != last_gps_status) {
+                draw_gps_status();
+                last_gps_status = current_gps_status;
             }
         }
 

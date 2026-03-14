@@ -7,3 +7,6 @@
 [submodule "reference/OsmoDemo"]
 	path = reference/OsmoDemo
 	url = https://github.com/dji-sdk/Osmo-GPS-Controller-Demo.git
+[submodule "reference/TinyGPSPlus"]
+	path = reference/TinyGPSPlus
+	url = https://github.com/m5stack/TinyGPSPlus.git
