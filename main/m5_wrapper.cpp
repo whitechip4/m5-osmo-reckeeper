@@ -21,9 +21,9 @@ extern "C" {
 
 void M5_begin(void) {
     ::M5.begin();
-    /* Set display rotation to landscape (left 90 degrees) */
-    /* 画面向きを横向き（左に90度回転）に設定 */
-    ::M5.Display.setRotation(1);
+    /* Set display rotation to landscape (right 90 degrees) */
+    /* 画面向きを横向き（右に90度回転）に設定 */
+    ::M5.Display.setRotation(3);
 }
 
 void M5_update(void) {
@@ -56,6 +56,16 @@ void M5_display_setTextSize(float size) {
 
 void M5_display_drawString(const char *string, int x, int y) {
     ::M5.Display.drawString(string, x, y);
+}
+
+/* Graphics drawing functions */
+/* グラフィック描画関数 */
+void M5_display_fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color) {
+    ::M5.Display.fillRect(x, y, w, h, color);
+}
+
+void M5_display_fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color) {
+    ::M5.Display.fillCircle(x, y, r, color);
 }
 
 int M5_BtnA_wasPressed(void) {

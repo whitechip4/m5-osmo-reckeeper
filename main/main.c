@@ -32,6 +32,8 @@ void M5_display_setTextColor(int textcolor, int textbgcolor);
 void M5Display_setTextDatum(int datum);
 void M5_display_setTextSize(float size);
 void M5_display_drawString(const char *string, int x, int y);
+void M5_display_fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color);
+void M5_display_fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color);
 
 /* PWR button functions */
 /* PWRボタン関連関数 */
@@ -50,33 +52,34 @@ void M5_Power_off(void);
 
 static const char *TAG = "main";
 
-/* Color definitions from M5GFX */
-/* M5GFXからの色定義 */
-#define TFT_BLACK       0x0000
-#define TFT_WHITE       0xFFFF
-#define TFT_RED         0xF800
-#define TFT_GREEN       0x07E0
-#define TFT_BLUE        0x001F
-#define TFT_YELLOW      0xFFE0
-#define TFT_CYAN        0x07FF
-#define TFT_MAGENTA     0xF81F
+/* Color definitions from M5GFX (RGB888 format) */
+/* M5GFXからの色定義（RGB888形式） */
+#define TFT_BLACK       0x000000  /*   0,   0,   0 */
+#define TFT_WHITE       0xFFFFFF  /* 255, 255, 255 */
+#define TFT_RED         0xFF0000  /* 255,   0,   0 */
+#define TFT_GREEN       0x00FF00  /*   0, 255,   0 */
+#define TFT_BLUE        0x0000FF  /*   0,   0, 255 */
+#define TFT_YELLOW      0xFFFF00  /* 255, 255,   0 */
+#define TFT_CYAN        0x00FFFF  /*   0, 255, 255 */
+#define TFT_MAGENTA     0xFF00FF  /* 255,   0, 255 */
 
 /* Text datum constants */
 /* テキスト基準点定数 */
-#define top_center 0
+#define top_left 0
+#define top_center 1
 #define top_right 2
 
 /* BLE state display strings and colors */
 /* BLE状態表示文字列と色 */
 typedef struct {
     const char *text;
-    uint16_t color;
+    uint32_t color;
 } state_display_t;
 
 static const state_display_t ble_state_display[] = {
     [BLE_STATE_IDLE]       = {"PUSH TO Pairing", TFT_WHITE},
     [BLE_STATE_SCANNING]   = {"SCAN...", TFT_YELLOW},
-    [BLE_STATE_CONNECTING] = {"CONN...", TFT_CYAN},
+    [BLE_STATE_CONNECTING] = {"CONNECTING...", TFT_CYAN},
     [BLE_STATE_CONNECTED]  = {"CONNECTED", TFT_GREEN},
     [BLE_STATE_FAILED]     = {"ERROR", TFT_RED}
 };
@@ -95,7 +98,7 @@ static const state_display_t dji_state_display[] = {
 /* Multiline display function */
 /* マルチライン表示関数 */
 static void display_multiline(const char *line1, const char *line2,
-                              uint16_t color1, uint16_t color2,
+                              uint32_t color1, uint32_t color2,
                               float size1, float size2) {
     M5_display_fillScreen(TFT_BLACK);
     int center_x = M5_display_width() / 2;
@@ -129,7 +132,7 @@ static void format_recording_time(uint16_t seconds, char *buffer, size_t size) {
 /* デバイスIDフォーマッター (0xFF66 -> "FF66") */
 static void format_device_id(uint32_t device_id, char *buffer, size_t size) {
     if (device_id == 0) {
-        snprintf(buffer, size, "????");
+        buffer[0] = '\0';  /* Return empty string (don't display "????") / 空文字を返す（"????" を表示しない） */
     } else {
         snprintf(buffer, size, "%04lX", (unsigned long)(device_id & 0xFFFF));
     }
@@ -137,7 +140,7 @@ static void format_device_id(uint32_t device_id, char *buffer, size_t size) {
 
 /* LCD update function */
 /* LCD更新関数 */
-static void update_lcd(const char *text, uint16_t color) {
+static void update_lcd(const char *text, uint32_t color) {
     M5_display_fillScreen(TFT_BLACK);
     M5_display_setTextColor(color, TFT_BLACK);
     M5Display_setTextDatum(top_center);
@@ -214,11 +217,90 @@ static void dji_state_callback(dji_state_t new_state) {
             break;
 
         case DJI_STATE_PAIRED:
-            display_multiline("■STOP", "Press to start", TFT_WHITE, TFT_WHITE, 2, 1);
+            M5_display_fillScreen(TFT_BLACK);
+            {
+                int center_x = M5_display_width() / 2;
+                int y_line1 = M5_display_height() / 2 - 20;  /* Adjusted 5 pixels up / 5ピクセル上に調整 */
+                int y_line2 = y_line1 + 25;
+                int y_line3 = y_line2 + 20;  /* Device ID display (3rd line) / デバイスID表示用（3行目） */
+
+                /* Draw STOP icon (square) + "STOP" text */
+                /* STOPアイコン（四角）+ "STOP"テキスト描画 */
+                int icon_size = 10;
+                int text_x_start = center_x - 25;
+                M5_display_fillRect(text_x_start, y_line1 - icon_size/2,
+                                    icon_size, icon_size, TFT_GREEN);
+
+                M5_display_setTextColor(TFT_GREEN, TFT_BLACK);
+                M5Display_setTextDatum(top_left);
+                M5_display_setTextSize(2);
+                M5_display_drawString("STOP", text_x_start + icon_size + 5, y_line1 - 8);
+
+                /* Draw "Press to start" below */
+                /* 下に "Press to start" を描画 */
+                M5_display_setTextColor(TFT_WHITE, TFT_BLACK);
+                M5Display_setTextDatum(top_center);
+                M5_display_setTextSize(1);
+                M5_display_drawString("Press to start", center_x, y_line2);
+
+                /* Draw Osmo device ID at bottom (small) */
+                /* 画面下部にOsmoデバイスIDを表示（小さく） */
+                uint32_t device_id = dji_get_device_id();
+                if (device_id != 0) {
+                    char device_id_buf[16];
+                    format_device_id(device_id, device_id_buf, sizeof(device_id_buf));
+                    char osmo_id_buf[32];
+                    snprintf(osmo_id_buf, sizeof(osmo_id_buf), "Osmo: %s", device_id_buf);
+
+                    M5_display_setTextColor(TFT_CYAN, TFT_BLACK);  /* Cyan color, not too distracting / シアン色で目立たせず */
+                    M5Display_setTextDatum(top_center);
+                    M5_display_setTextSize(1);
+                    M5_display_drawString(osmo_id_buf, center_x, y_line3);
+                }
+            }
             break;
 
         case DJI_STATE_RECORDING:
-            display_multiline("●REC", time_buf, TFT_RED, TFT_RED, 2, 2);
+            M5_display_fillScreen(TFT_BLACK);
+            {
+                int center_x = M5_display_width() / 2;
+                int y_line1 = M5_display_height() / 2 - 20;  /* Adjusted 5 pixels up / 5ピクセル上に調整 */
+                int y_line2 = y_line1 + 25;
+                int y_line3 = y_line2 + 20;  /* Device ID display (3rd line) / デバイスID表示用（3行目） */
+
+                /* Draw REC icon (circle) + "REC" text */
+                /* RECアイコン（円）+ "REC"テキスト描画 */
+                int icon_radius = 6;
+                int text_x_start = center_x - 25;
+                M5_display_fillCircle(text_x_start, y_line1, icon_radius, TFT_RED);
+
+                M5_display_setTextColor(TFT_RED, TFT_BLACK);
+                M5Display_setTextDatum(top_left);
+                M5_display_setTextSize(2);
+                M5_display_drawString("REC", text_x_start + icon_radius + 8, y_line1 - 8);
+
+                /* Draw recording time below */
+                /* 下に録画時間を描画 */
+                M5_display_setTextColor(TFT_RED, TFT_BLACK);
+                M5Display_setTextDatum(top_center);
+                M5_display_setTextSize(2);
+                M5_display_drawString(time_buf, center_x, y_line2);
+
+                /* Draw Osmo device ID at bottom (small) */
+                /* 画面下部にOsmoデバイスIDを表示（小さく） */
+                uint32_t device_id = dji_get_device_id();
+                if (device_id != 0) {
+                    char device_id_buf[16];
+                    format_device_id(device_id, device_id_buf, sizeof(device_id_buf));
+                    char osmo_id_buf[32];
+                    snprintf(osmo_id_buf, sizeof(osmo_id_buf), "Osmo: %s", device_id_buf);
+
+                    M5_display_setTextColor(TFT_CYAN, TFT_BLACK);  /* Cyan color, not too distracting / シアン色で目立たせず */
+                    M5Display_setTextDatum(top_center);
+                    M5_display_setTextSize(1);
+                    M5_display_drawString(osmo_id_buf, center_x, y_line3);
+                }
+            }
             break;
 
         case DJI_STATE_RESTARTING:
@@ -234,12 +316,21 @@ static void dji_state_callback(dji_state_t new_state) {
             break;
     }
 
-    /* Draw Rec Keep indicator in top-right corner */
+    /* Draw Rec Keep indicator in top-right corner (always displayed) */
+    /* 右上にRec Keepモード状態を常時表示 */
+    M5_display_setTextSize(1);
+    M5Display_setTextDatum(top_right);
+
     if (rec_keep_enabled) {
-        M5_display_setTextSize(1);
+        /* ON: Red color */
+        /* ON: 赤色 */
+        M5_display_setTextColor(TFT_RED, TFT_BLACK);
+        M5_display_drawString("RecKeep:ON", M5_display_width() - 2, 2);
+    } else {
+        /* OFF: Green color */
+        /* OFF: 緑色 */
         M5_display_setTextColor(TFT_GREEN, TFT_BLACK);
-        M5Display_setTextDatum(top_right);
-        M5_display_drawString("RK:ON", M5_display_width() - 5, 5);
+        M5_display_drawString("RecKeep:OFF", M5_display_width() - 2, 2);
     }
 }
 
@@ -327,6 +418,52 @@ void app_main(void) {
         /* ボタン状態更新 */
         M5_update();
 
+        /* Update recording time display when recording */
+        /* 録画中に録画時間表示を更新 */
+        dji_state_t dji_state = dji_get_state();
+        if (dji_state == DJI_STATE_RECORDING) {
+            static uint16_t last_rec_time = 0xFFFF;  /* Initialize to impossible value */
+
+            uint16_t rec_time = dji_get_recording_time();
+            if (rec_time != last_rec_time) {
+                char time_buf[16];
+                format_recording_time(rec_time, time_buf, sizeof(time_buf));
+
+                int center_x = M5_display_width() / 2;
+                int y_line1 = M5_display_height() / 2 - 20;  /* Match same coordinate calculation / 他と同じ座標計算に修正 */
+                int y_line2 = y_line1 + 25;
+                int y_line3 = y_line2 + 20;
+
+                /* Clear only the time area (bottom line) */
+                /* 時間表示エリアのみクリア（下段） */
+                M5_display_fillRect(0, y_line2 - 2, M5_display_width(), 20, TFT_BLACK);
+
+                /* Redraw time */
+                /* 時間を再描画 */
+                M5_display_setTextColor(TFT_RED, TFT_BLACK);
+                M5Display_setTextDatum(top_center);
+                M5_display_setTextSize(2);
+                M5_display_drawString(time_buf, center_x, y_line2);
+
+                /* Redraw device ID (cleared by time area clear) */
+                /* デバイスIDを再描画（時間エリアクリアで消えたため） */
+                uint32_t device_id = dji_get_device_id();
+                if (device_id != 0) {
+                    char device_id_buf[16];
+                    format_device_id(device_id, device_id_buf, sizeof(device_id_buf));
+                    char osmo_id_buf[32];
+                    snprintf(osmo_id_buf, sizeof(osmo_id_buf), "Osmo: %s", device_id_buf);
+
+                    M5_display_setTextColor(TFT_CYAN, TFT_BLACK);
+                    M5Display_setTextDatum(top_center);
+                    M5_display_setTextSize(1);
+                    M5_display_drawString(osmo_id_buf, center_x, y_line3);
+                }
+
+                last_rec_time = rec_time;
+            }
+        }
+
         /* Check button A press */
         /* ボタンA押下チェック */
         extern int M5_BtnA_wasPressed(void);  /* Forward declaration */
@@ -392,19 +529,24 @@ void app_main(void) {
             /* Show power off/reset guide */
             /* 電源OFF/リセット案内表示 */
             M5_display_fillScreen(TFT_BLACK);
+
+            int x = M5_display_width() / 2;
+            int y_line1 = M5_display_height() / 2 - 20;
+            int y_line2 = y_line1 + 45;
+
+            /* Line 1: "Press 3s" + "to PWR OFF" (2-line, yellow, large) */
+            /* 1行目: "Press 3s" + "to PWR OFF" (2行、黄色、大) */
             M5_display_setTextColor(TFT_YELLOW, TFT_BLACK);
             M5Display_setTextDatum(top_center);
             M5_display_setTextSize(2);
+            M5_display_drawString("Press 3s", x, y_line1);
+            M5_display_drawString("to PWR OFF", x, y_line1 + 16);
 
-            int x = M5_display_width() / 2;
-            int y_top = M5_display_height() / 2 - 20;
-            int y_bottom = M5_display_height() / 2 + 10;
-
-            M5_display_drawString("Press 3s", x, y_top);
-            M5_display_drawString("to PWR OFF", x, y_top + 20);
-            M5_display_setTextSize(1);
+            /* Line 2: "Release to reset" (1-line, white, small) */
+            /* 2行目: "Release to reset" (1行、白色、小) */
             M5_display_setTextColor(TFT_WHITE, TFT_BLACK);
-            M5_display_drawString("Release to reset", x, y_bottom);
+            M5_display_setTextSize(1);
+            M5_display_drawString("Release to reset", x, y_line2);
 
             /* Small delay to show guide */
             /* 案内表示のための小さな遅延 */
@@ -426,13 +568,13 @@ void app_main(void) {
 
                 char countdown[8];
                 snprintf(countdown, sizeof(countdown), "%d", i);
-                M5_display_drawString(countdown, x, y_top);
+                M5_display_drawString(countdown, x, y_line1);
 
                 /* Show "Release to reset" message below countdown */
                 /* カウントダウンの下に「Release to reset」を表示 */
                 M5_display_setTextSize(1);
                 M5_display_setTextColor(TFT_WHITE, TFT_BLACK);
-                M5_display_drawString("Release to reset", x, y_bottom);
+                M5_display_drawString("Release to reset", x, y_line2);
 
                 /* Check if button is still pressed during countdown */
                 /* カウントダウン中にボタンが押されているかチェック */
@@ -464,7 +606,7 @@ void app_main(void) {
             M5_display_setTextColor(TFT_WHITE, TFT_BLACK);
             M5Display_setTextDatum(top_center);
             M5_display_setTextSize(2);
-            M5_display_drawString("BYE", x, y_top);
+            M5_display_drawString("BYE", x, y_line1);
 
             /* Ensure minimum display time */
             /* 最小表示時間確保 */

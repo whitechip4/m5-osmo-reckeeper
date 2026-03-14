@@ -29,6 +29,8 @@ static uint16_t s_seq = 0;
 /* 録画状態追跡 */
 static bool s_is_recording = false;
 static uint16_t s_recording_time = 0;      /* Recording time in seconds / 録画時間（秒） */
+static int64_t s_recording_start_time = 0; /* Recording start time (microseconds) / 録画開始時刻 */
+static bool s_use_internal_timer = false;  /* Use internal timer flag / 内部タイマー使用フラグ */
 static uint32_t s_camera_device_id = 0;    /* Camera device ID / カメラデバイスID */
 
 /* Pairing state variables */
@@ -82,6 +84,8 @@ esp_err_t dji_protocol_init(void) {
     s_dji_state = DJI_STATE_IDLE;
     s_seq = 0;
     s_is_recording = false;
+    s_recording_start_time = 0;
+    s_use_internal_timer = false;
     s_waiting_for_response = false;
     s_waiting_for_camera_request = false;
     s_expected_seq = 0;
@@ -375,6 +379,10 @@ void dji_handle_notification(const uint8_t *data, uint16_t length) {
                 ESP_LOGI(TAG, "Camera started recording");
                 set_dji_state(DJI_STATE_RECORDING);
 
+                /* Start internal timer for recording time */
+                /* 内部タイマーを開始 */
+                s_recording_start_time = esp_timer_get_time();
+
                 /* Clear local stop flag and cancel Rec Keep timer */
                 /* ローカル停止フラグクリア、Rec Keepタイマーキャンセル */
                 s_local_stop_pending = false;
@@ -387,6 +395,16 @@ void dji_handle_notification(const uint8_t *data, uint16_t length) {
                 storage_save_rec_keep_mode(s_rec_keep_enabled);
 
             } else if (!s_is_recording && was_recording) {
+                ESP_LOGI(TAG, "Camera stopped recording");
+                if (s_dji_state == DJI_STATE_RECORDING) {
+                    set_dji_state(DJI_STATE_PAIRED);
+                }
+
+                /* Reset internal timer */
+                /* 内部タイマーリセット */
+                s_recording_start_time = 0;
+
+                /* Handle Rec Keep mode */
                 ESP_LOGI(TAG, "Camera stopped recording");
                 if (s_dji_state == DJI_STATE_RECORDING) {
                     set_dji_state(DJI_STATE_PAIRED);
@@ -542,7 +560,15 @@ void dji_set_rec_keep_callback(void (*callback)(bool)) {
 }
 
 uint16_t dji_get_recording_time(void) {
-    return s_recording_time;
+    if (s_is_recording && s_recording_start_time > 0) {
+        /* Calculate elapsed time from internal timer */
+        /* 内部タイマーから経過時間を計算 */
+        int64_t current_time = esp_timer_get_time();
+        int64_t elapsed_us = current_time - s_recording_start_time;
+        uint16_t elapsed_sec = (uint16_t)(elapsed_us / 1000000);  /* Convert to seconds */
+        return elapsed_sec;
+    }
+    return s_recording_time;  /* Return BLE data or 0 if not recording */
 }
 
 uint32_t dji_get_device_id(void) {
