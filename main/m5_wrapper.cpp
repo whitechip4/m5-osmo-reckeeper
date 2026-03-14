@@ -7,6 +7,7 @@
  */
 
 #include <M5Unified.h>
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 
 /* Button state tracking */
@@ -80,6 +81,38 @@ int M5_BtnB_wasPressed(void) {
 
     last_btnb_state = current_state;
     return 0;
+}
+
+/* PWR button detection */
+/* PWRボタン検出 */
+static bool last_btnpwr_state = false;
+
+int M5_BtnPWR_wasPressed(void) {
+    bool current_state = ::M5.BtnPWR.isPressed();
+
+    /* Detect rising edge (false -> true) */
+    /* 立ち上がりエッジ検出 */
+    if (!last_btnpwr_state && current_state) {
+        last_btnpwr_state = current_state;
+        return 1;
+    }
+
+    last_btnpwr_state = current_state;
+    return 0;
+}
+
+int M5_BtnPWR_isPressed(void) {
+    return ::M5.BtnPWR.isPressed() ? 1 : 0;
+}
+
+/* Power management */
+/* 電源管理 */
+void M5_Power_restart(void) {
+    esp_restart();
+}
+
+void M5_Power_off(void) {
+    ::M5.Power.powerOff();
 }
 
 } /* extern "C" */

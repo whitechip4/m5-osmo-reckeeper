@@ -33,6 +33,13 @@ void M5Display_setTextDatum(int datum);
 void M5_display_setTextSize(float size);
 void M5_display_drawString(const char *string, int x, int y);
 
+/* PWR button functions */
+/* PWRボタン関連関数 */
+int M5_BtnPWR_wasPressed(void);
+int M5_BtnPWR_isPressed(void);
+void M5_Power_restart(void);
+void M5_Power_off(void);
+
 #ifdef __cplusplus
 }
 #endif
@@ -300,6 +307,94 @@ void app_main(void) {
                     ESP_LOGE(TAG, "Failed to set Rec Keep mode: %s", esp_err_to_name(ret));
                 }
             }
+        }
+
+        /* Check PWR button */
+        /* PWRボタン処理 */
+        if (M5_BtnPWR_wasPressed()) {
+            ESP_LOGI(TAG, "PWR button pressed, starting countdown...");
+
+            /* Show power off/reset guide */
+            /* 電源OFF/リセット案内表示 */
+            M5_display_fillScreen(TFT_BLACK);
+            M5_display_setTextColor(TFT_YELLOW, TFT_BLACK);
+            M5Display_setTextDatum(top_center);
+            M5_display_setTextSize(2);
+
+            int x = M5_display_width() / 2;
+            int y_top = M5_display_height() / 2 - 20;
+            int y_bottom = M5_display_height() / 2 + 10;
+
+            M5_display_drawString("Press 3s", x, y_top);
+            M5_display_drawString("to PWR OFF", x, y_top + 20);
+            M5_display_setTextSize(1);
+            M5_display_setTextColor(TFT_WHITE, TFT_BLACK);
+            M5_display_drawString("Release to reset", x, y_bottom);
+
+            /* Small delay to show guide */
+            /* 案内表示のための小さな遅延 */
+            vTaskDelay(pdMS_TO_TICKS(500));
+
+            /* 3 second countdown */
+            /* 3秒カウントダウン */
+            bool button_released = false;
+            for (int i = 3; i > 0; i--) {
+                /* Update display for countdown */
+                /* カウントダウン表示更新 */
+                M5_display_fillScreen(TFT_BLACK);
+
+                /* Show countdown number in red */
+                /* カウント数字を赤色で表示 */
+                M5_display_setTextColor(TFT_RED, TFT_BLACK);
+                M5Display_setTextDatum(top_center);
+                M5_display_setTextSize(3);
+
+                char countdown[8];
+                snprintf(countdown, sizeof(countdown), "%d", i);
+                M5_display_drawString(countdown, x, y_top);
+
+                /* Show "Release to reset" message below countdown */
+                /* カウントダウンの下に「Release to reset」を表示 */
+                M5_display_setTextSize(1);
+                M5_display_setTextColor(TFT_WHITE, TFT_BLACK);
+                M5_display_drawString("Release to reset", x, y_bottom);
+
+                /* Check if button is still pressed during countdown */
+                /* カウントダウン中にボタンが押されているかチェック */
+                for (int j = 0; j < 20; j++) {  /* 50ms * 20 = 1000ms */
+                    M5_update();
+                    if (!M5_BtnPWR_isPressed()) {
+                        button_released = true;
+                        break;
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(50));
+                }
+
+                if (button_released) {
+                    /* Button released: Reset device */
+                    /* ボタン離し: リセット */
+                    ESP_LOGI(TAG, "PWR button released, restarting device...");
+                    M5_Power_restart();
+                    break;  /* Not reached, but for clarity */
+                }
+            }
+
+            /* Button held for 3 seconds: Power off */
+            /* 3秒間押し続けた: 電源OFF */
+            ESP_LOGI(TAG, "PWR button held for 3 seconds, powering off...");
+
+            /* Show bye message */
+            /* さようならメッセージ表示 */
+            M5_display_fillScreen(TFT_BLACK);
+            M5_display_setTextColor(TFT_WHITE, TFT_BLACK);
+            M5Display_setTextDatum(top_center);
+            M5_display_setTextSize(2);
+            M5_display_drawString("BYE", x, y_top);
+
+            /* Ensure minimum display time */
+            /* 最小表示時間確保 */
+            vTaskDelay(pdMS_TO_TICKS(500));
+            M5_Power_off();
         }
 
         /* Small delay to prevent watchdog trigger */

@@ -56,6 +56,7 @@ ESP-IDF 標準プロジェクト構成に従う:
 ```
 main/           - メインソースコード (C++)
   main.cpp       - エントリーポイント
+  config.h       - ユーザーが調整可能な定数を定義
   CMakeLists.txt - コンポーネント依存設定 (M5Unified を PRIV_REQUIRES)
 components/     - M5Stack 公式ライブラリ (git submodule)
   M5Unified/     - ハードウェア抽象化レイヤー
@@ -67,6 +68,10 @@ sdkconfig       - ESP-IDF 設定ファイル
 ```
 
 ## Development Workflow
+
+### ビルドキャッシュ
+
+ccacheを利用しビルド時間を短縮するオプションを追加する事
 
 ### ビルド・デプロイスクリプト
 
