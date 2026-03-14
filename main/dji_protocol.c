@@ -560,15 +560,22 @@ void dji_set_rec_keep_callback(void (*callback)(bool)) {
 }
 
 uint16_t dji_get_recording_time(void) {
+    /* Priority: Use BLE notification record_time if available (includes pre-recording) */
+    /* 優先度: BLE通知のrecord_timeを使用（プリレコーディング時間を含む） */
+    if (s_recording_time > 0) {
+        return s_recording_time;
+    }
+
+    /* Fallback: Calculate from internal timer if BLE data not yet received */
+    /* フォールバック: BLEデータ未受信時は内部タイマーから計算 */
     if (s_is_recording && s_recording_start_time > 0) {
-        /* Calculate elapsed time from internal timer */
-        /* 内部タイマーから経過時間を計算 */
         int64_t current_time = esp_timer_get_time();
         int64_t elapsed_us = current_time - s_recording_start_time;
         uint16_t elapsed_sec = (uint16_t)(elapsed_us / 1000000);  /* Convert to seconds */
         return elapsed_sec;
     }
-    return s_recording_time;  /* Return BLE data or 0 if not recording */
+
+    return 0;  /* Not recording / 録画していない */
 }
 
 uint32_t dji_get_device_id(void) {
