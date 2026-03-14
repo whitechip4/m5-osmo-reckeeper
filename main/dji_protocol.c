@@ -28,6 +28,8 @@ static uint16_t s_seq = 0;
 /* Recording status tracking */
 /* 録画状態追跡 */
 static bool s_is_recording = false;
+static uint16_t s_recording_time = 0;      /* Recording time in seconds / 録画時間（秒） */
+static uint32_t s_camera_device_id = 0;    /* Camera device ID / カメラデバイスID */
 
 /* Pairing state variables */
 /* ペアリング状態変数 */
@@ -69,6 +71,7 @@ static esp_err_t dji_send_record_command(bool start);
 static void rec_keep_timer_callback(void* arg) {
     ESP_LOGI(TAG, "Rec Keep timer triggered, restarting recording...");
     if (!s_is_recording && s_rec_keep_enabled) {
+        set_dji_state(DJI_STATE_RESTARTING);
         dji_send_record_command(true);
     }
     s_local_stop_pending = false;
@@ -257,6 +260,9 @@ void dji_handle_notification(const uint8_t *data, uint16_t length) {
 
                 ESP_LOGI(TAG, "Received response: ret_code=%u, SEQ=%u", resp->ret_code, frame.seq);
 
+                /* Extract camera device ID */
+                s_camera_device_id = resp->device_id;
+
                 if (s_waiting_for_response && frame.seq == s_expected_seq) {
                     s_waiting_for_response = false;
 
@@ -347,13 +353,16 @@ void dji_handle_notification(const uint8_t *data, uint16_t length) {
             camera_status_push_command_frame_t *status =
                 (camera_status_push_command_frame_t *)&frame.data[2];
 
+            /* Extract recording time */
+            s_recording_time = status->record_time;
+
             /* Log status periodically (not every time to reduce spam) */
             /* 定期的に状態をログ（スパム抑制） */
             static uint32_t last_log_time = 0;
             uint32_t current_time = esp_timer_get_time() / 1000;
             if (current_time - last_log_time > 5 || status->camera_status != s_is_recording) {
-                ESP_LOGI(TAG, "Status: camera_status=0x%02X, mode=0x%02X",
-                         status->camera_status, status->camera_mode);
+                ESP_LOGI(TAG, "Status: camera_status=0x%02X, mode=0x%02X, time=%u",
+                         status->camera_status, status->camera_mode, s_recording_time);
                 last_log_time = current_time;
             }
 
@@ -423,9 +432,11 @@ static esp_err_t dji_send_record_command(bool start) {
         return ESP_ERR_INVALID_STATE;
     }
 
-    /* Check if paired */
-    /* ペアリング確認 */
-    if (s_dji_state != DJI_STATE_PAIRED && s_dji_state != DJI_STATE_RECORDING) {
+    /* Check if paired (allow PAIRED, RECORDING, and RESTARTING states) */
+    /* ペアリング確認（PAIRED、RECORDING、RESTARTING状態を許可） */
+    if (s_dji_state != DJI_STATE_PAIRED &&
+        s_dji_state != DJI_STATE_RECORDING &&
+        s_dji_state != DJI_STATE_RESTARTING) {
         ESP_LOGE(TAG, "Not paired with camera (state=%d)", s_dji_state);
         return ESP_ERR_INVALID_STATE;
     }
@@ -528,4 +539,12 @@ bool dji_is_rec_keep_mode_enabled(void) {
 
 void dji_set_rec_keep_callback(void (*callback)(bool)) {
     s_rec_keep_callback = callback;
+}
+
+uint16_t dji_get_recording_time(void) {
+    return s_recording_time;
+}
+
+uint32_t dji_get_device_id(void) {
+    return s_camera_device_id;
 }

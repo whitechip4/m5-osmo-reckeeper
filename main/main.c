@@ -74,7 +74,7 @@ typedef struct {
 } state_display_t;
 
 static const state_display_t ble_state_display[] = {
-    [BLE_STATE_IDLE]       = {"READY", TFT_WHITE},
+    [BLE_STATE_IDLE]       = {"PUSH TO Pairing", TFT_WHITE},
     [BLE_STATE_SCANNING]   = {"SCAN...", TFT_YELLOW},
     [BLE_STATE_CONNECTING] = {"CONN...", TFT_CYAN},
     [BLE_STATE_CONNECTED]  = {"CONNECTED", TFT_GREEN},
@@ -84,12 +84,56 @@ static const state_display_t ble_state_display[] = {
 /* DJI state display strings and colors */
 /* DJI状態表示文字列と色 */
 static const state_display_t dji_state_display[] = {
-    [DJI_STATE_IDLE]      = {"READY", TFT_WHITE},
-    [DJI_STATE_PAIRING]   = {"PAIRING...", TFT_MAGENTA},
-    [DJI_STATE_PAIRED]    = {"PAIRED", TFT_CYAN},
-    [DJI_STATE_RECORDING] = {"REC", TFT_RED},
-    [DJI_STATE_FAILED]    = {"PAIR ERR", TFT_RED}
+    [DJI_STATE_IDLE]       = {"IDLE", TFT_WHITE},
+    [DJI_STATE_PAIRING]    = {"PAIRING", TFT_CYAN},
+    [DJI_STATE_PAIRED]     = {"PAIRED", TFT_CYAN},
+    [DJI_STATE_RECORDING]  = {"REC", TFT_RED},
+    [DJI_STATE_RESTARTING] = {"RESTARTING", TFT_YELLOW},
+    [DJI_STATE_FAILED]     = {"PAIR ERR", TFT_RED}
 };
+
+/* Multiline display function */
+/* マルチライン表示関数 */
+static void display_multiline(const char *line1, const char *line2,
+                              uint16_t color1, uint16_t color2,
+                              float size1, float size2) {
+    M5_display_fillScreen(TFT_BLACK);
+    int center_x = M5_display_width() / 2;
+    int y1 = M5_display_height() / 2 - 15;
+    int y2 = y1 + 25;
+
+    if (line1) {
+        M5_display_setTextColor(color1, TFT_BLACK);
+        M5Display_setTextDatum(top_center);
+        M5_display_setTextSize(size1);
+        M5_display_drawString(line1, center_x, y1);
+    }
+
+    if (line2) {
+        M5_display_setTextColor(color2, TFT_BLACK);
+        M5Display_setTextDatum(top_center);
+        M5_display_setTextSize(size2);
+        M5_display_drawString(line2, center_x, y2);
+    }
+}
+
+/* Recording time formatter (MM:SS) */
+/* 録画時間フォーマッター (MM:SS) */
+static void format_recording_time(uint16_t seconds, char *buffer, size_t size) {
+    uint16_t mins = seconds / 60;
+    uint16_t secs = seconds % 60;
+    snprintf(buffer, size, "%02u:%02u", mins, secs);
+}
+
+/* Device ID formatter (0xFF66 -> "FF66") */
+/* デバイスIDフォーマッター (0xFF66 -> "FF66") */
+static void format_device_id(uint32_t device_id, char *buffer, size_t size) {
+    if (device_id == 0) {
+        snprintf(buffer, size, "????");
+    } else {
+        snprintf(buffer, size, "%04lX", (unsigned long)(device_id & 0xFFFF));
+    }
+}
 
 /* LCD update function */
 /* LCD更新関数 */
@@ -119,7 +163,11 @@ static void ble_state_callback(ble_state_t new_state) {
     /* BLE状態のみLCD更新 (DJI状態は別途更新) */
     dji_state_t dji_state = dji_get_state();
     if (dji_state == DJI_STATE_IDLE || dji_state == DJI_STATE_FAILED) {
-        update_lcd(display->text, display->color);
+        if (new_state == BLE_STATE_IDLE) {
+            display_multiline("PUSH TO", "Pairing", TFT_WHITE, TFT_WHITE, 2, 2);
+        } else {
+            update_lcd(display->text, display->color);
+        }
     }
 
     /* Auto-start pairing when BLE connected */
@@ -142,24 +190,51 @@ static void dji_state_callback(dji_state_t new_state) {
     const state_display_t *display = &dji_state_display[new_state];
     ESP_LOGI(TAG, "DJI state changed: %s", display->text);
 
-    /* Check if Rec Keep mode is enabled for display */
-    /* Rec Keepモード状態確認 */
-    extern bool dji_is_rec_keep_mode_enabled(void);  /* Forward declaration */
+    /* Check if Rec Keep mode is enabled */
     bool rec_keep_enabled = dji_is_rec_keep_mode_enabled();
 
-    /* Update display with Rec Keep indicator */
-    /* Rec Keep表示付きで更新 */
-    M5_display_fillScreen(TFT_BLACK);
-    M5_display_setTextColor(display->color, TFT_BLACK);
-    M5Display_setTextDatum(top_center);
-    M5_display_setTextSize(2);
+    /* Get recording time if available */
+    uint16_t rec_time = dji_get_recording_time();
+    char time_buf[16];
+    format_recording_time(rec_time, time_buf, sizeof(time_buf));
 
-    int x = M5_display_width() / 2;
-    int y = M5_display_height() / 2 - 10;
-    M5_display_drawString(display->text, x, y);
+    /* Get device ID if pairing */
+    uint32_t device_id = dji_get_device_id();
+    char device_id_buf[16];
+    format_device_id(device_id, device_id_buf, sizeof(device_id_buf));
+
+    /* Display based on state */
+    switch (new_state) {
+        case DJI_STATE_IDLE:
+            display_multiline("PUSH TO", "Pairing", TFT_WHITE, TFT_WHITE, 2, 2);
+            break;
+
+        case DJI_STATE_PAIRING:
+            display_multiline("Finding Device...", device_id_buf, TFT_CYAN, TFT_CYAN, 1, 2);
+            break;
+
+        case DJI_STATE_PAIRED:
+            display_multiline("■STOP", "Press to start", TFT_WHITE, TFT_WHITE, 2, 1);
+            break;
+
+        case DJI_STATE_RECORDING:
+            display_multiline("●REC", time_buf, TFT_RED, TFT_RED, 2, 2);
+            break;
+
+        case DJI_STATE_RESTARTING:
+            display_multiline("Restart", "Recording...", TFT_YELLOW, TFT_YELLOW, 2, 2);
+            break;
+
+        case DJI_STATE_FAILED:
+            display_multiline("PAIR ERR", NULL, TFT_RED, TFT_BLACK, 2, 1);
+            break;
+
+        default:
+            display_multiline("UNKNOWN", NULL, TFT_WHITE, TFT_BLACK, 2, 1);
+            break;
+    }
 
     /* Draw Rec Keep indicator in top-right corner */
-    /* 右上にRec Keep表示 */
     if (rec_keep_enabled) {
         M5_display_setTextSize(1);
         M5_display_setTextColor(TFT_GREEN, TFT_BLACK);
@@ -242,7 +317,7 @@ void app_main(void) {
 
     /* Display initial state */
     /* 初期状態表示 */
-    update_lcd("READY", TFT_WHITE);
+    display_multiline("PUSH TO", "Pairing", TFT_WHITE, TFT_WHITE, 2, 2);
     ESP_LOGI(TAG, "System ready. Press BtnA to scan for DJI Osmo360.");
 
     /* Main event loop */

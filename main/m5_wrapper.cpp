@@ -21,6 +21,9 @@ extern "C" {
 
 void M5_begin(void) {
     ::M5.begin();
+    /* Set display rotation to landscape (left 90 degrees) */
+    /* 画面向きを横向き（左に90度回転）に設定 */
+    ::M5.Display.setRotation(1);
 }
 
 void M5_update(void) {

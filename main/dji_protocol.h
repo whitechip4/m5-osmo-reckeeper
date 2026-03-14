@@ -24,6 +24,7 @@ typedef enum {
     DJI_STATE_PAIRING,         /* Pairing in progress / ペアリング中 */
     DJI_STATE_PAIRED,          /* Paired successfully / ペアリング完了 */
     DJI_STATE_RECORDING,       /* Camera is recording / 録画中 */
+    DJI_STATE_RESTARTING,      /* Rec Keep: Restarting recording / 録画再開中 */
     DJI_STATE_FAILED           /* Pairing/operation failed / 失敗 */
 } dji_state_t;
 
@@ -144,6 +145,22 @@ bool dji_is_rec_keep_mode_enabled(void);
  * @param callback Function to call when Rec Keep mode changes (receives enabled state)
  */
 void dji_set_rec_keep_callback(void (*callback)(bool enabled));
+
+/**
+ * @brief Get current recording time in seconds
+ *        現在の録画時間取得（秒）
+ *
+ * @return Recording time in seconds, 0 if not recording
+ */
+uint16_t dji_get_recording_time(void);
+
+/**
+ * @brief Get camera device ID
+ *        カメラデバイスID取得
+ *
+ * @return Device ID (e.g., 0xFF66 for Osmo360), 0 if unknown
+ */
+uint32_t dji_get_device_id(void);
 
 #ifdef __cplusplus
 }
