@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "esp_err.h"
+#include "protocol/dji_protocol_data_structures.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -206,6 +207,14 @@ uint32_t dji_get_sd_remaining_photos(void);
  * @return 残り録画時間（秒）、0は利用不可
  */
 uint32_t dji_get_sd_remaining_time(void);
+
+/**
+ * @brief Send GPS module data to camera
+ *        GPSモジュールデータをカメラに送信
+ *
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t dji_send_gps_module_data(void);
 
 #ifdef __cplusplus
 }

@@ -16,6 +16,7 @@
 #include "protocol/dji_protocol_parser.h"
 #include "protocol/dji_protocol_data_structures.h"
 #include "ble_simple.h"
+#include "gps_module.h"
 
 static const char *TAG = "DJI";
 
@@ -636,4 +637,85 @@ uint32_t dji_get_sd_remaining_photos(void) {
 /* 残り録画時間を取得 (秒) */
 uint32_t dji_get_sd_remaining_time(void) {
     return s_sd_remaining_time;
+}
+
+/**
+ * @brief Send GPS module data to camera
+ *        GPSモジュールデータをカメラに送信
+ *
+ * Converts gps_data_t to DJI format and sends via BLE.
+ * gps_data_tをDJI形式に変換してBLE送信。
+ *
+ * Note: GPS data should be sent continuously when paired (not just during recording).
+ *       The camera will use GPS data during recording.
+ * GPSデータはペアリング済みなら常に送信する必要がある（録画中のみではない）。
+ * カメラ側で録画中のGPSデータを使用する。
+ *
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t dji_send_gps_module_data(void) {
+    const ble_connection_t *conn = ble_get_connection();
+    if (conn == NULL || !conn->is_connected) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    /* Check if paired (send GPS data continuously when paired) */
+    /* ペアリング済みか確認（ペアリング済みならGPSデータを常時送信） */
+    if (s_dji_state != DJI_STATE_PAIRED &&
+        s_dji_state != DJI_STATE_RECORDING) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    /* Get GPS data from module */
+    /* GPSモジュールからデータ取得 */
+    gps_data_t gps_data;
+    esp_err_t ret = gps_get_data(&gps_data);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    /* Validate GPS data */
+    /* GPSデータ検証 */
+    if (!gps_is_found()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    /* Convert to DJI format (following reference implementation) */
+    /* DJI形式に変換（Reference実装に準拠） */
+    gps_data_push_command_frame_t gps_frame = {
+        .year_month_day = (gps_data.year + 2000) * 10000 +
+                          gps_data.month * 100 + gps_data.day,
+        .hour_minute_second = (gps_data.hour + 8) * 10000 +  /* UTC+8 */
+                              gps_data.minute * 100 + (int32_t)gps_data.second,
+        .gps_longitude = (int32_t)(gps_data.longitude * 1e7),
+        .gps_latitude = (int32_t)(gps_data.latitude * 1e7),
+        .height = (int32_t)(gps_data.altitude * 1000),  /* meters to mm */
+        .speed_to_north = gps_data.velocity_north * 100.0f,  /* m/s to cm/s */
+        .speed_to_east = gps_data.velocity_east * 100.0f,
+        .speed_to_wnward = gps_data.velocity_descend * 100.0f,
+        .vertical_accuracy = 1000,    /* Default 1000mm */
+        .horizontal_accuracy = 1000,  /* Default 1000mm */
+        .speed_accuracy = 10,         /* Default 10cm/s */
+        .satellite_number = gps_data.num_satellites
+    };
+
+    /* Create and send protocol frame (CmdSet 0x00, CmdID 0x17) */
+    /* プロトコルフレーム作成と送信 (CmdSet 0x00, CmdID 0x17) */
+    size_t frame_length;
+    uint8_t *frame = protocol_create_frame(0x00, 0x17, 0x01, &gps_frame,
+                                           get_next_seq(), &frame_length);
+    if (frame == NULL) {
+        ESP_LOGE(TAG, "Failed to create GPS data frame");
+        return ESP_FAIL;
+    }
+
+    ret = ble_write(frame, frame_length);
+    free(frame);
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to send GPS data: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    return ESP_OK;
 }

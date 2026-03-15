@@ -83,4 +83,25 @@ typedef struct __attribute__((packed)) {
     uint8_t ret_code;              /* Return code / 返り値コード */
 } record_control_response_frame_t;
 
+/* GPS Data Push (0x1D, 0x06) */
+/* GPSデータプッシュ (0x1D, 0x06) */
+typedef struct __attribute__((packed)) {
+    int32_t year_month_day;        /* Date (YYYYMMDD) / 年月日 */
+    int32_t hour_minute_second;    /* Time (HHMMSS, UTC+8) / 時分秒 (UTC+8) */
+    int32_t gps_longitude;         /* Longitude (value * 10^7) / 経度 (値 * 10^7) */
+    int32_t gps_latitude;          /* Latitude (value * 10^7) / 緯度 (値 * 10^7) */
+    int32_t height;                /* Height in mm / 高度 (mm) */
+    float speed_to_north;          /* Speed to north in cm/s / 北向き速度 (cm/s) */
+    float speed_to_east;           /* Speed to east in cm/s / 東向き速度 (cm/s) */
+    float speed_to_wnward;         /* Speed downward in cm/s / 下向き速度 (cm/s) */
+    uint32_t vertical_accuracy;    /* Vertical accuracy in mm / 垂直精度 (mm) */
+    uint32_t horizontal_accuracy;  /* Horizontal accuracy in mm / 水平精度 (mm) */
+    uint32_t speed_accuracy;       /* Speed accuracy in cm/s / 速度精度 (cm/s) */
+    uint32_t satellite_number;     /* Number of satellites / 衛星数 */
+} gps_data_push_command_frame_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t ret_code;              /* Return code / 戻り値コード */
+} gps_data_push_response_frame_t;
+
 #endif /* DJI_PROTOCOL_DATA_STRUCTURES_H */

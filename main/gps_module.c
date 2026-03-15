@@ -526,8 +526,8 @@ esp_err_t gps_init(void) {
         return ret;
     }
 
-    /* Send GPS update rate command (2Hz) */
-    /* GPS更新レートコマンド送信（2Hz） */
+    /* Send GPS update rate command (10Hz) */
+    /* GPS更新レートコマンド送信（10Hz） */
     uart_write_bytes(GPS_UART_PORT, GPS_UPDATE_RATE_CMD, strlen(GPS_UPDATE_RATE_CMD));
 
     /* Initialize GPS data structure */

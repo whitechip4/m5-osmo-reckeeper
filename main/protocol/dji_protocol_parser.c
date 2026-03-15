@@ -142,6 +142,8 @@ uint8_t* protocol_create_frame(uint8_t cmd_set, uint8_t cmd_id,
         case 0x00: /* Connection / Version / GPS */
             if (cmd_id == 0x19) { /* Connection request */
                 data_length = sizeof(connection_request_command_frame_t);
+            } else if (cmd_id == 0x17) { /* GPS data push */
+                data_length = sizeof(gps_data_push_command_frame_t);
             } else {
                 ESP_LOGE(TAG, "Unsupported CmdID 0x%02X for CmdSet 0x00", cmd_id);
                 return NULL;

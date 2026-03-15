@@ -25,8 +25,8 @@ extern "C" {
 #define GPS_UART_RX_PIN        GPIO_NUM_33  /* GROVE port white (RX) / GROVEポート白 */
 #define GPS_UART_BAUD_RATE     115200
 #define GPS_UART_RX_BUF_SIZE   800
-#define GPS_UPDATE_RATE_CMD    "$PAIR050,500*26\r\n"  /* 2Hz update rate / 2Hz更新レート */
-#define GPS_POLL_INTERVAL_MS   500                     /* 2Hz polling / 2Hzポーリング */
+#define GPS_UPDATE_RATE_CMD    "$PAIR050,100*22\r\n"  /* 10Hz update rate / 10Hz更新レート */
+#define GPS_POLL_INTERVAL_MS   100                     /* 10Hz polling / 10Hzポーリング */
 #define GPS_INVALID_THRESHOLD  10
 #define GPS_OK_MIN_SATELLITES  4                       /* Minimum satellites for OK status / OK状態の最小衛星数 */
 

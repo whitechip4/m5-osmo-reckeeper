@@ -678,12 +678,21 @@ void app_main(void) {
             static gps_status_t last_gps_status = GPS_STATUS_NULL + 10; /* Initialize to impossible value */
             static uint32_t last_gps_poll_time = 0;
 
-            /* Poll GPS at 2Hz (500ms interval) */
-            /* GPSを2Hz（500ms間隔）でポーリング */
+            /* Poll GPS at 10Hz (100ms interval) */
+            /* GPSを10Hz（100ms間隔）でポーリング */
             uint32_t current_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
             if (current_time - last_gps_poll_time >= GPS_POLL_INTERVAL_MS) {
                 gps_poll();
                 last_gps_poll_time = current_time;
+
+                /* Send GPS data to camera when paired (continuous sending) */
+                /* ペアリング済みならGPSデータをカメラに送信（常時送信） */
+                if ((dji_state == DJI_STATE_PAIRED || dji_state == DJI_STATE_RECORDING) && gps_is_found()) {
+                    esp_err_t gps_ret = dji_send_gps_module_data();
+                    if (gps_ret != ESP_OK) {
+                        ESP_LOGW(TAG, "Failed to send GPS data: %s", esp_err_to_name(gps_ret));
+                    }
+                }
             }
 
             /* Update GPS status display when status changes */
