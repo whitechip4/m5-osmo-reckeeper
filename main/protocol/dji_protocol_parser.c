@@ -234,14 +234,18 @@ uint8_t* protocol_create_frame(uint8_t cmd_set, uint8_t cmd_id,
 
     free(payload_data);
 
-    ESP_LOGI(TAG, "Frame created: CmdSet=0x%02X, CmdID=0x%02X, SEQ=%u, len=%zu",
-             cmd_set, cmd_id, seq, *frame_length_out);
+    /* Skip logging for GPS data (sent at 10Hz, too verbose) */
+    /* GPSデータはログをスキップ（10Hzで送信されるため過剰） */
+    if (!(cmd_set == 0x00 && cmd_id == 0x17)) {
+        ESP_LOGI(TAG, "Frame created: CmdSet=0x%02X, CmdID=0x%02X, SEQ=%u, len=%zu",
+                 cmd_set, cmd_id, seq, *frame_length_out);
 
-    /* Log first 16 bytes for debugging */
-    /* デバッグ用に最初の16バイトをログ */
-    ESP_LOGI(TAG, "Frame bytes: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
-             frame[0], frame[1], frame[2], frame[3], frame[4], frame[5], frame[6], frame[7],
-             frame[8], frame[9], frame[10], frame[11], frame[12], frame[13], frame[14], frame[15]);
+        /* Log first 16 bytes for debugging */
+        /* デバッグ用に最初の16バイトをログ */
+        ESP_LOGI(TAG, "Frame bytes: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+                 frame[0], frame[1], frame[2], frame[3], frame[4], frame[5], frame[6], frame[7],
+                 frame[8], frame[9], frame[10], frame[11], frame[12], frame[13], frame[14], frame[15]);
+    }
 
     return frame;
 }
