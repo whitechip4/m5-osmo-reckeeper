@@ -5,8 +5,8 @@
  */
 
 #include "handlers/button_handlers.h"
-#include "ui/ui.h"
-#include "ui/ui_layout.h"
+#include "ui/ui_state.h"
+#include "ui/ui_renderer.h"
 #include "ble_simple.h"
 #include "dji_protocol.h"
 #include "esp_log.h"
@@ -22,7 +22,6 @@ struct M5UnifiedImpl;
 extern struct M5UnifiedImpl M5;
 
 void M5_update(void);
-void M5_display_fillScreen(int color);
 int M5_BtnPWR_isPressed(void);
 void M5_Power_restart(void);
 void M5_Power_off(void);
@@ -30,17 +29,6 @@ void M5_Power_off(void);
 #ifdef __cplusplus
 }
 #endif
-
-/* Color definitions from M5GFX (RGB888 format) */
-/* M5GFXからの色定義（RGB888形式） */
-#define TFT_BLACK 0x000000
-#define TFT_WHITE 0xFFFFFF
-#define TFT_RED   0xFF0000
-#define TFT_YELLOW 0xFFFF00
-
-/* Text datum constants */
-/* テキスト基準点定数 */
-#define top_center 1
 
 static const char *TAG = "button_handlers";
 
@@ -82,14 +70,13 @@ static bool btn_disconnect(void) {
  * Blocks until button released or 3 seconds elapse
  * Returns: BTN_ACTION_RESET or BTN_ACTION_POWER_OFF */
 static button_action_t btn_pwr_countdown_loop(void) {
-    const ui_layout_t *layout = ui_get_layout();
     bool button_released = false;
 
     /* 3 second countdown */
     for (int i = 3; i > 0; i--) {
-        M5_display_fillScreen(TFT_BLACK);
-        ui_show_countdown(i, layout->center_x, layout->y_line1, layout->y_line1 + 45);
-        ui_update_battery_indicator();
+        /* Update poweroff state and render immediately */
+        ui_state_set_poweroff(true, i, false);
+        ui_renderer_render();
 
         /* Check if button is still pressed during countdown */
         for (int j = 0; j < 20; j++) {  /* 50ms * 20 = 1000ms */
@@ -161,12 +148,10 @@ button_action_t btn_handle_b_press(void) {
 /* Handle PWR button press (blocking call with countdown) */
 button_action_t btn_handle_pwr_press(void) {
     ESP_LOGI(TAG, "PWR button pressed, starting countdown...");
-    const ui_layout_t *layout = ui_get_layout();
 
     /* Show power off/reset guide */
-    M5_display_fillScreen(TFT_BLACK);
-    ui_show_poweroff_guide(layout->center_x, layout->y_line1, layout->y_line1 + 45);
-    ui_update_battery_indicator();
+    ui_state_set_poweroff(true, 0, false);
+    ui_renderer_render();
 
     /* Small delay to show guide */
     vTaskDelay(pdMS_TO_TICKS(500));
@@ -177,9 +162,8 @@ button_action_t btn_handle_pwr_press(void) {
     /* Handle result */
     if (result == BTN_ACTION_POWER_OFF) {
         /* Show bye message */
-        M5_display_fillScreen(TFT_BLACK);
-        ui_show_poweroff_goodbye(layout->center_x, layout->y_line1);
-        ui_update_battery_indicator();
+        ui_state_set_poweroff(true, 0, true);
+        ui_renderer_render();
 
         /* Ensure minimum display time */
         vTaskDelay(pdMS_TO_TICKS(500));

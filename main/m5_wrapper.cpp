@@ -6,14 +6,19 @@
  * Provides C interface to M5Unified C++ API
  */
 
+#include "m5_wrapper.h"
 #include <M5Unified.h>
+#include <lgfx/v1/LGFX_Sprite.hpp>
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
+#include "esp_log.h"
 
 /* Button state tracking */
 /* ボタン状態追跡 */
 static bool last_btna_state = false;
 static bool last_btnb_state = false;
+
+static const char *TAG = "M5Wrapper";
 
 /* C wrapper functions */
 /* Cラッパー関数 */
@@ -134,6 +139,115 @@ void M5_Power_off(void) {
 
 int M5_Power_getBatteryLevel(void) {
     return (int)::M5.Power.getBatteryLevel();
+}
+
+/* ========== Sprite Buffer (Double Buffering) ========== */
+/* スプライトバッファ（ダブルバッファ） */
+
+/* Sprite buffer structure (opaque to C) */
+/* スプライトバッファ構造体（Cからは不透明） */
+struct sprite_buffer {
+    LGFX_Sprite *sprite;
+};
+
+/* Create sprite buffer */
+sprite_buffer_t* M5Sprite_create(int32_t width, int32_t height) {
+    sprite_buffer_t *buffer = (sprite_buffer_t *)malloc(sizeof(sprite_buffer_t));
+    if (!buffer) {
+        ESP_LOGE(TAG, "Failed to allocate sprite buffer structure");
+        return nullptr;
+    }
+
+    buffer->sprite = new LGFX_Sprite();
+    if (!buffer->sprite) {
+        ESP_LOGE(TAG, "Failed to create LGFX_Sprite");
+        free(buffer);
+        return nullptr;
+    }
+
+    /* Create sprite in internal memory (M5StickC Plus2 has no PSRAM) */
+    /* 内部メモリにスプライトを作成（M5StickC Plus2はPSRAMなし） */
+    if (!buffer->sprite->createSprite(width, height)) {
+        ESP_LOGE(TAG, "Failed to create sprite %dx%d", width, height);
+        delete buffer->sprite;
+        free(buffer);
+        return nullptr;
+    }
+
+    ESP_LOGI(TAG, "Sprite buffer created %dx%d (approx %d KB)",
+             width, height, (width * height * 2) / 1024);
+    return buffer;
+}
+
+/* Destroy sprite buffer */
+void M5Sprite_destroy(sprite_buffer_t* sprite) {
+    if (!sprite) {
+        return;
+    }
+
+    if (sprite->sprite) {
+        sprite->sprite->deleteSprite();
+        delete sprite->sprite;
+    }
+
+    free(sprite);
+    ESP_LOGI(TAG, "Sprite buffer destroyed");
+}
+
+/* Fill sprite with color */
+void M5Sprite_fillScreen(sprite_buffer_t* sprite, uint32_t color) {
+    if (sprite && sprite->sprite) {
+        sprite->sprite->fillScreen(color);
+    }
+}
+
+/* Set text color */
+void M5Sprite_setTextColor(sprite_buffer_t* sprite, uint32_t textcolor, uint32_t textbgcolor) {
+    if (sprite && sprite->sprite) {
+        sprite->sprite->setTextColor(textcolor, textbgcolor);
+    }
+}
+
+/* Set text datum */
+void M5Sprite_setTextDatum(sprite_buffer_t* sprite, int datum) {
+    if (sprite && sprite->sprite) {
+        sprite->sprite->setTextDatum((textdatum_t)datum);
+    }
+}
+
+/* Set text size */
+void M5Sprite_setTextSize(sprite_buffer_t* sprite, float size) {
+    if (sprite && sprite->sprite) {
+        sprite->sprite->setTextSize(size);
+    }
+}
+
+/* Draw string */
+void M5Sprite_drawString(sprite_buffer_t* sprite, const char *string, int x, int y) {
+    if (sprite && sprite->sprite) {
+        sprite->sprite->drawString(string, x, y);
+    }
+}
+
+/* Fill rectangle */
+void M5Sprite_fillRect(sprite_buffer_t* sprite, int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color) {
+    if (sprite && sprite->sprite) {
+        sprite->sprite->fillRect(x, y, w, h, color);
+    }
+}
+
+/* Fill circle */
+void M5Sprite_fillCircle(sprite_buffer_t* sprite, int32_t x, int32_t y, int32_t r, uint32_t color) {
+    if (sprite && sprite->sprite) {
+        sprite->sprite->fillCircle(x, y, r, color);
+    }
+}
+
+/* Push sprite to display (atomic update) */
+void M5Sprite_push(sprite_buffer_t* sprite, int32_t x, int32_t y) {
+    if (sprite && sprite->sprite) {
+        sprite->sprite->pushSprite(&::M5.Display, x, y);
+    }
 }
 
 } /* extern "C" */

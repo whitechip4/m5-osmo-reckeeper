@@ -5,30 +5,19 @@
  */
 
 #include "handlers/system_init.h"
-#include "ui/ui.h"
+#include "ui/ui_state.h"
+#include "ui/ui_renderer.h"
 #include "ui/ui_layout.h"
 #include "ble_simple.h"
 #include "dji_protocol.h"
 #include "storage.h"
 #include "gps_module.h"
+#include "m5_wrapper.h"
 #include "esp_log.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* Forward declaration for M5Unified C interface */
-struct M5UnifiedImpl;
-extern struct M5UnifiedImpl M5;
-
-void M5_begin(void);
-void M5_display_fillScreen(int color);
-void M5_display_setTextColor(int textcolor, int textbgcolor);
-void M5Display_setTextDatum(int datum);
-void M5_display_setTextSize(float size);
-void M5_display_drawString(const char *string, int x, int y);
-int M5_display_width(void);
-int M5_display_height(void);
 
 static const char *TAG = "sys_init";
 
@@ -58,7 +47,8 @@ static void show_error(const char *text) {
 
 /* ========== Callbacks ========== */
 
-/* BLE state change callback */
+/* BLE state change callback
+ * Updates UI state only, no drawing */
 static void ble_state_callback(ble_state_t new_state) {
     if (new_state < BLE_STATE_IDLE || new_state > BLE_STATE_FAILED) {
         ESP_LOGW(TAG, "Invalid BLE state: %d", new_state);
@@ -71,22 +61,13 @@ static void ble_state_callback(ble_state_t new_state) {
                              (new_state == BLE_STATE_CONNECTED) ? "CONNECTED" : "ERROR";
     ESP_LOGI(TAG, "BLE state changed: %s", state_text);
 
-    /* Only update LCD for BLE states when DJI is idle/failed */
+    /* Update UI state for BLE states when DJI is idle/failed */
     dji_state_t dji_state = dji_get_state();
     if (dji_state == DJI_STATE_IDLE || dji_state == DJI_STATE_FAILED) {
         if (new_state == BLE_STATE_IDLE) {
-            ui_show_idle_state();
-        } else {
-            uint32_t color = (new_state == BLE_STATE_CONNECTED) ? TFT_GREEN :
-                            (new_state == BLE_STATE_FAILED) ? TFT_RED : TFT_YELLOW;
-            M5_display_fillScreen(TFT_BLACK);
-            M5_display_setTextColor(color, TFT_BLACK);
-            M5Display_setTextDatum(top_center);
-            M5_display_setTextSize(2);
-            int x = M5_display_width() / 2;
-            int y = M5_display_height() / 2 - 10;
-            M5_display_drawString(state_text, x, y);
+            ui_state_set_main(DJI_STATE_IDLE, 0, 0);
         }
+        /* For SCANNING/CONNECTING/CONNECTED/FAILED, DJI state takes precedence in display */
     }
 
     /* Auto-start pairing when BLE connected */
@@ -96,10 +77,13 @@ static void ble_state_callback(ble_state_t new_state) {
         dji_start_pairing(is_first_pairing);
     }
 
-    ui_update_battery_indicator();
+    /* Update battery state */
+    int device_battery = M5_Power_getBatteryLevel();
+    ui_state_set_battery(device_battery, 0);
 }
 
-/* DJI state change callback */
+/* DJI state change callback
+ * Updates UI state only, no drawing */
 static void dji_state_callback(dji_state_t new_state) {
     if (new_state < DJI_STATE_IDLE || new_state > DJI_STATE_FAILED) {
         ESP_LOGW(TAG, "Invalid DJI state: %d", new_state);
@@ -116,49 +100,25 @@ static void dji_state_callback(dji_state_t new_state) {
     /* Get current recording time and device ID */
     uint16_t rec_time = dji_get_recording_time();
     uint32_t device_id = dji_get_device_id();
+
+    /* Update main display state */
+    ui_state_set_main(new_state, device_id, rec_time);
+
+    /* Update Rec Keep state */
     bool rec_keep_enabled = dji_is_rec_keep_mode_enabled();
+    ui_state_set_rec_keep(rec_keep_enabled);
 
-    /* Display based on state */
-    switch (new_state) {
-        case DJI_STATE_IDLE:
-            ui_show_idle_state();
-            break;
-
-        case DJI_STATE_PAIRING:
-            ui_show_pairing_state(device_id);
-            break;
-
-        case DJI_STATE_PAIRED:
-            ui_show_paired_state();
-            break;
-
-        case DJI_STATE_RECORDING:
-            ui_show_recording_state(rec_time);
-            break;
-
-        case DJI_STATE_RESTARTING:
-            ui_show_restarting_state();
-            break;
-
-        case DJI_STATE_FAILED:
-            ui_show_failed_state();
-            break;
-
-        default:
-            break;
-    }
-
-    /* Update Rec Keep indicator */
-    ui_update_rec_keep_indicator(rec_keep_enabled);
-
-    /* Update battery indicator */
-    ui_update_battery_indicator();
+    /* Update battery state */
+    int device_battery = M5_Power_getBatteryLevel();
+    int camera_battery = dji_get_camera_battery_level();
+    ui_state_set_battery(device_battery, camera_battery);
 }
 
-/* Rec Keep mode change callback */
+/* Rec Keep mode change callback
+ * Updates UI state only, no drawing */
 static void rec_keep_mode_callback(bool enabled) {
     ESP_LOGI(TAG, "Rec Keep mode changed: %s", enabled ? "ON" : "OFF");
-    ui_update_rec_keep_indicator(enabled);
+    ui_state_set_rec_keep(enabled);
 }
 
 /* Register all callbacks */
@@ -181,6 +141,14 @@ bool system_initialize(void) {
     M5_begin();
     ESP_LOGI(TAG, "M5Unified initialized");
     M5_display_fillScreen(TFT_BLACK);
+
+    /* Initialize UI state management */
+    ui_state_init();
+
+    /* Initialize UI renderer (creates double buffer) */
+    if (!ui_renderer_init()) {
+        ESP_LOGW(TAG, "UI renderer initialization failed, falling back to direct drawing");
+    }
 
     /* Initialize storage */
     esp_err_t ret = storage_init();
@@ -219,10 +187,13 @@ bool system_initialize(void) {
     }
     ESP_LOGI(TAG, "GPS module initialized");
 
-    /* Display initial state */
-    ui_show_idle_state();
-    ui_update_battery_indicator();
-    ui_update_gps_status();
+    /* Set initial UI state */
+    ui_state_set_main(DJI_STATE_IDLE, 0, 0);
+    int device_battery = M5_Power_getBatteryLevel();
+    ui_state_set_battery(device_battery, 0);
+
+    /* Initial render */
+    ui_renderer_render();
 
     ESP_LOGI(TAG, "System ready. Press BtnA to scan for DJI Osmo360.");
     return true;
