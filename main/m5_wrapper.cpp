@@ -24,6 +24,10 @@ void M5_begin(void) {
     /* Set display rotation to landscape (right 90 degrees) */
     /* 画面向きを横向き（右に90度回転）に設定 */
     ::M5.Display.setRotation(3);
+
+    /* Disable IMU to save power (not used in this project) */
+    /* IMUを無効化して省電力（本プロジェクトでは使用しない） */
+    ::M5.Imu.sleep();
 }
 
 void M5_update(void) {

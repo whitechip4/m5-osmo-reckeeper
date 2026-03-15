@@ -14,6 +14,7 @@ Firmware for M5StickC Plus2 to remotely control REC/STOP on DJI Osmo360 action c
 ## Hardware Requirements
 
 - **M5StickC Plus2** - Microcontroller module with ESP32-PICO-V3-02
+- **M5 Unit GPS v1.1 (AT6668)**: GPS Module(optional for dashboard)
 
 ## Software Requirements
 
