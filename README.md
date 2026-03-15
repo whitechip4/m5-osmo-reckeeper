@@ -31,17 +31,19 @@ Firmware for M5StickC Plus2 to remotely control REC/STOP on DJI Osmo360 action c
 ```
 osmo-reckeeper/
 ├── main/                    # Main source code (C/C++)
+│   ├── main.c             - Entry point and event loop
+│   ├── m5_wrapper.cpp     - M5Unified wrapper
+│   ├── display/           # Display helpers
+│   ├── handlers/          # Event handlers
+│   ├── protocol/          # Protocol parsers
+│   └── ui/                # UI components
 ├── components/              # M5Stack official libraries (git submodule)
-│   ├── M5Unified/           # Hardware abstraction layer (v0.2.13)
-│   └── M5GFX/              # LCD/graphics drawing library (v0.2.19)
-├── reference/              # DJI official demo (git submodule)
-│   └── OsmoDemo/           # Reference implementation for agent analysis
-├── tools/                  # Build, flash, and monitor scripts
-│   ├── build.sh           # Build only
-│   ├── flash.sh           # Build and flash
-│   └── monitor.sh         # Serial monitor
-├── CMakeLists.txt         # Root build configuration
-└── sdkconfig              # ESP-IDF configuration file
+│   ├── M5Unified/         # Hardware abstraction layer (v0.2.13)
+│   └── M5GFX/             # LCD/graphics drawing library (v0.2.19)
+├── reference/               # Reference implementation for AI agent analysis
+├── tools/                   # Build, flash, and monitor scripts
+├── CMakeLists.txt          # Root build configuration
+└── sdkconfig               # ESP-IDF configuration file
 ```
 
 ## Setup Instructions
