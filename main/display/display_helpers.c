@@ -31,11 +31,12 @@ uint32_t dh_get_battery_color(uint8_t battery_level, bool is_device) {
     }
 }
 
-/* Format recording time as MM:SS */
+/* Format recording time as HH:MM:SS */
 void dh_format_recording_time(uint16_t seconds, char *buffer, size_t size) {
-    uint16_t mins = seconds / 60;
+    uint16_t hours = seconds / 3600;
+    uint16_t mins = (seconds % 3600) / 60;
     uint16_t secs = seconds % 60;
-    snprintf(buffer, size, "%02u:%02u", mins, secs);
+    snprintf(buffer, size, "%02u:%02u:%02u", hours, mins, secs);
 }
 
 /* Format device ID as 4-character hex string */
