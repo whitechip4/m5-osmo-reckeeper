@@ -83,8 +83,11 @@ static void gattc_event_handler(esp_gattc_cb_event_t event,
                                 esp_gatt_if_t gattc_if,
                                 esp_ble_gattc_cb_param_t *param);
 
-/* State management helper */
-/* 状態管理ヘルパー関数 */
+/**
+ * @brief Update BLE state machine
+ * @param new_state The new BLE state to transition to
+ * @note Triggers the registered callback if the state has changed
+ */
 static void set_state(ble_state_t new_state) {
     if (s_current_state != new_state) {
         ESP_LOGI(TAG, "State change: %d -> %d", s_current_state, new_state);
@@ -95,8 +98,12 @@ static void set_state(ble_state_t new_state) {
     }
 }
 
-/* DJI device detection from advertising data */
-/* 広告データからのDJIデバイス検出 */
+/**
+ * @brief Detect DJI camera from BLE advertising data
+ * @param scan_result Pointer to the scan result containing advertising data
+ * @return true if DJI camera detected, false otherwise
+ * @note Checks for DJI manufacturer specific data (0xAA, 0x08, ..., 0xFA)
+ */
 static bool is_dji_camera_adv(esp_ble_gap_cb_param_t *scan_result) {
     const uint8_t *ble_adv = scan_result->scan_rst.ble_adv;
     const uint8_t adv_len = scan_result->scan_rst.adv_data_len + scan_result->scan_rst.scan_rsp_len;
@@ -126,9 +133,12 @@ static bool is_dji_camera_adv(esp_ble_gap_cb_param_t *scan_result) {
 }
 
 /* Timer callback to stop scanning */
-/* スキャン停止タイマーコールバック */
 static TimerHandle_t s_scan_timer;
 
+/**
+ * @brief Timer callback to stop BLE scanning
+ * @param xTimer Timer handle (unused)
+ */
 static void scan_stop_timer_callback(TimerHandle_t xTimer) {
     ESP_LOGI(TAG, "Scan timeout, stopping...");
     esp_ble_gap_stop_scanning();
@@ -139,6 +149,11 @@ static void scan_stop_timer_callback(TimerHandle_t xTimer) {
  *  パブリックAPI実装
  * ------------------------- */
 
+/**
+ * @brief Initialize BLE stack for Osmo360 communication
+ * @return ESP_OK on success, error code otherwise
+ * @note Initializes BLE controller, Bluedroid stack, and registers GATT callbacks
+ */
 esp_err_t ble_init(void) {
     ESP_LOGI(TAG, "Initializing BLE stack...");
 
@@ -218,6 +233,11 @@ esp_err_t ble_init(void) {
     return ESP_OK;
 }
 
+/**
+ * @brief Start BLE scanning for DJI Osmo360 devices
+ * @return ESP_OK on success, ESP_FAIL if not in IDLE state
+ * @note Initiates BLE scan with 4-second timeout, filters for DJI devices with RSSI >= -80 dBm
+ */
 esp_err_t ble_start_scanning_and_connect(void) {
     if (s_current_state != BLE_STATE_IDLE) {
         ESP_LOGW(TAG, "Cannot start scan: not in IDLE state (current=%d)", s_current_state);
@@ -244,6 +264,10 @@ esp_err_t ble_start_scanning_and_connect(void) {
     return ESP_OK;
 }
 
+/**
+ * @brief Disconnect from BLE device
+ * @return ESP_OK (always succeeds, even if not connected)
+ */
 esp_err_t ble_disconnect(void) {
     if (s_connection.is_connected) {
         ESP_LOGI(TAG, "Disconnecting...");
@@ -252,18 +276,36 @@ esp_err_t ble_disconnect(void) {
     return ESP_OK;
 }
 
+/**
+ * @brief Get current BLE state
+ *
+ * @return Current BLE state
+ */
 ble_state_t ble_get_state(void) {
     return s_current_state;
 }
 
+/**
+ * @brief Register callback for BLE state changes
+ * @param callback Pointer to callback function, NULL to unregister
+ */
 void ble_set_state_callback(void (*callback)(ble_state_t)) {
     s_state_callback = callback;
 }
 
+/**
+ * @brief Register callback for BLE GATT notifications
+ * @param callback Pointer to callback function, NULL to unregister
+ */
 void ble_set_notify_callback(ble_notify_callback_t callback) {
     s_notify_callback = callback;
 }
 
+/**
+ * @brief Get current BLE connection information
+ *
+ * @return Pointer to connection structure if connected, NULL otherwise
+ */
 const ble_connection_t* ble_get_connection(void) {
     if (s_connection.is_connected) {
         return &s_connection;
@@ -271,6 +313,12 @@ const ble_connection_t* ble_get_connection(void) {
     return NULL;
 }
 
+/**
+ * @brief Write data to BLE GATT characteristic
+ * @param data Pointer to data buffer to write
+ * @param length Length of data in bytes
+ * @return ESP_OK on success, ESP_ERR_INVALID_STATE if not connected or handle not set
+ */
 esp_err_t ble_write(const uint8_t *data, uint16_t length) {
     if (!s_connection.is_connected) {
         ESP_LOGW(TAG, "Cannot write: not connected");
@@ -305,6 +353,12 @@ esp_err_t ble_write(const uint8_t *data, uint16_t length) {
     return ret;
 }
 
+/**
+ * @brief Connect to BLE device by MAC address
+ * @param mac_addr Pointer to 6-byte MAC address
+ * @return ESP_OK on success, ESP_ERR_INVALID_ARG if MAC is NULL, ESP_FAIL if not in IDLE state
+ * @note Must be in IDLE state to connect
+ */
 esp_err_t ble_connect_to_mac(const uint8_t *mac_addr) {
     if (mac_addr == NULL) {
         ESP_LOGE(TAG, "MAC address is NULL");
@@ -336,6 +390,11 @@ esp_err_t ble_connect_to_mac(const uint8_t *mac_addr) {
     return ESP_OK;
 }
 
+/**
+ * @brief Connect to saved device or start scanning
+ * @return ESP_OK on success, error code otherwise
+ * @note Checks NVS for paired device, attempts reconnection if found, otherwise starts scanning
+ */
 esp_err_t ble_connect_or_scan(void) {
     uint8_t saved_mac[6];
     bool is_found;
@@ -354,6 +413,13 @@ esp_err_t ble_connect_or_scan(void) {
  *  GAP イベントハンドラ
  * ------------------------- */
 
+/**
+ * @brief Handle GAP BLE events
+ * @param event GAP event type
+ * @param param Pointer to event parameters
+ * @details Processes GAP events including scan parameter setup, scan results,
+ *          and scan completion. Manages device discovery and connection initiation.
+ */
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {
     switch (event) {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT:
@@ -452,6 +518,14 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
  *  GATTC イベントハンドラ
  * ------------------------- */
 
+/**
+ * @brief Handle GATT client events
+ * @param event GATTC event type
+ * @param gattc_if GATT interface ID
+ * @param param Pointer to event parameters
+ * @details Processes GATTC events including connection establishment, service discovery,
+ *          characteristic discovery, notification/indication reception, and write operations.
+ */
 static void gattc_event_handler(esp_gattc_cb_event_t event,
                                 esp_gatt_if_t gattc_if,
                                 esp_ble_gattc_cb_param_t *param) {

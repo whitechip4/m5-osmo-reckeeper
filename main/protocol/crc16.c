@@ -48,6 +48,13 @@ static const crc16_t crc16_table[256] = {
     0x8201, 0x42c0, 0x4380, 0x8341, 0x4100, 0x81c1, 0x8081, 0x4040
 };
 
+/**
+ * @brief Update CRC-16 with data
+ * @param crc Current CRC value (use crc16_init() for first call)
+ * @param data Pointer to data buffer
+ * @param data_len Length of data in bytes
+ * @return Updated CRC-16 value
+ */
 crc16_t crc16_update(crc16_t crc, const void *data, size_t data_len)
 {
     const unsigned char *d = (const unsigned char *)data;
@@ -61,6 +68,12 @@ crc16_t crc16_update(crc16_t crc, const void *data, size_t data_len)
     return crc & 0xffff;
 }
 
+/**
+ * @brief Calculate CRC-16 checksum
+ * @param data Pointer to data buffer
+ * @param length Length of data in bytes
+ * @return CRC-16 checksum
+ */
 uint16_t calculate_crc16(const uint8_t *data, size_t length) {
     crc16_t crc = crc16_init();
     crc = crc16_update(crc, data, length);

@@ -18,16 +18,21 @@ static const char *TAG = "UI";
 
 /* ========== Public Interface ========== */
 
-/* Legacy double buffer initialization - deprecated
- * Now handled by ui_renderer_init() */
+/**
+ * @brief Initialize double buffer (deprecated)
+ * @return true on success, false on failure
+ * @deprecated Use ui_renderer_init() instead. This function forwards to ui_renderer_init().
+ */
 bool ui_init_double_buffer(void) {
     ESP_LOGW(TAG, "ui_init_double_buffer is deprecated, use ui_renderer_init instead");
     /* Forward to ui_renderer for compatibility */
     return ui_renderer_init();
 }
 
-/* Legacy double buffer cleanup - deprecated
- * Now handled by ui_renderer_cleanup() */
+/**
+ * @brief Clean up double buffer (deprecated)
+ * @deprecated Use ui_renderer_cleanup() instead. This function forwards to ui_renderer_cleanup().
+ */
 void ui_cleanup_double_buffer(void) {
     ESP_LOGW(TAG, "ui_cleanup_double_buffer is deprecated, use ui_renderer_cleanup instead");
     /* Forward to ui_renderer for compatibility */

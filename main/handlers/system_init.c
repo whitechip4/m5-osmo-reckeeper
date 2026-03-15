@@ -34,7 +34,11 @@ static const char *TAG = "sys_init";
 /* テキスト基準点定数 */
 #define top_center 1
 
-/* LCD error display helper */
+/**
+ * @brief Display error message on LCD
+ * @param text Error message to display
+ * @note Shows error message in red text on black background
+ */
 static void show_error(const char *text) {
     M5_display_fillScreen(TFT_BLACK);
     M5_display_setTextColor(TFT_RED, TFT_BLACK);
@@ -47,8 +51,11 @@ static void show_error(const char *text) {
 
 /* ========== Callbacks ========== */
 
-/* BLE state change callback
- * Updates UI state only, no drawing */
+/**
+ * @brief BLE state change callback
+ * @param new_state New BLE state
+ * @note Updates UI state when BLE state changes. Auto-starts DJI pairing when connected.
+ */
 static void ble_state_callback(ble_state_t new_state) {
     if (new_state < BLE_STATE_IDLE || new_state > BLE_STATE_FAILED) {
         ESP_LOGW(TAG, "Invalid BLE state: %d", new_state);
@@ -82,8 +89,11 @@ static void ble_state_callback(ble_state_t new_state) {
     ui_state_set_battery(device_battery, 0);
 }
 
-/* DJI state change callback
- * Updates UI state only, no drawing */
+/**
+ * @brief DJI state change callback
+ * @param new_state New DJI protocol state
+ * @note Updates UI state when DJI protocol state changes
+ */
 static void dji_state_callback(dji_state_t new_state) {
     if (new_state < DJI_STATE_IDLE || new_state > DJI_STATE_FAILED) {
         ESP_LOGW(TAG, "Invalid DJI state: %d", new_state);
@@ -114,14 +124,20 @@ static void dji_state_callback(dji_state_t new_state) {
     ui_state_set_battery(device_battery, camera_battery);
 }
 
-/* Rec Keep mode change callback
- * Updates UI state only, no drawing */
+/**
+ * @brief Rec Keep mode change callback
+ * @param enabled true if Rec Keep mode enabled, false otherwise
+ * @note Updates UI state when Rec Keep mode is toggled
+ */
 static void rec_keep_mode_callback(bool enabled) {
     ESP_LOGI(TAG, "Rec Keep mode changed: %s", enabled ? "ON" : "OFF");
     ui_state_set_rec_keep(enabled);
 }
 
-/* Register all callbacks */
+/**
+ * @brief Register all system callbacks
+ * @note Registers callbacks for BLE state, DJI state, Rec Keep mode, and BLE notifications
+ */
 static void register_callbacks(void) {
     ble_set_state_callback(ble_state_callback);
     dji_set_state_callback(dji_state_callback);
@@ -134,6 +150,12 @@ static void register_callbacks(void) {
 
 /* ========== Public Interface ========== */
 
+/**
+ * @brief Initialize all system components
+ * @return true on success, false on fatal error
+ * @details Initializes M5Unified, UI, storage, BLE, DJI protocol, and GPS module.
+ *          Registers callbacks and performs initial UI render.
+ */
 bool system_initialize(void) {
     ESP_LOGI(TAG, "Osmo360 BLE Remote Starting...");
 

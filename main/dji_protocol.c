@@ -63,8 +63,11 @@ static bool s_local_stop_pending = false;
 static esp_timer_handle_t s_rec_keep_timer = NULL;
 static void (*s_rec_keep_callback)(bool) = NULL;
 
-/* State management helper */
-/* 状態管理ヘルパー */
+/**
+ * @brief Update DJI protocol state machine
+ * @param new_state The new DJI state to transition to
+ * @note Triggers the registered callback if the state has changed
+ */
 static void set_dji_state(dji_state_t new_state) {
     if (s_dji_state != new_state) {
         ESP_LOGI(TAG, "State change: %d -> %d", s_dji_state, new_state);
@@ -75,8 +78,10 @@ static void set_dji_state(dji_state_t new_state) {
     }
 }
 
-/* Get next sequence number */
-/* 次のシーケンス番号取得 */
+/**
+ * @brief Get next sequence number for protocol frames
+ * @return Next sequence number
+ */
 static uint16_t get_next_seq(void) {
     return ++s_seq;
 }
@@ -85,8 +90,12 @@ static uint16_t get_next_seq(void) {
 /* 前方宣言 */
 static esp_err_t dji_send_record_command(bool start);
 
-/* Rec Keep timer callback */
-/* Rec Keepタイマーコールバック */
+/**
+ * @brief Rec Keep mode timer callback
+ * @param arg User argument (unused)
+ * @details Triggered 3 seconds after external recording stop. Restarts recording
+ *          if Rec Keep mode is enabled and recording is still stopped.
+ */
 static void rec_keep_timer_callback(void* arg) {
     ESP_LOGI(TAG, "Rec Keep timer triggered, restarting recording...");
     if (!s_is_recording && s_rec_keep_enabled) {
@@ -96,6 +105,11 @@ static void rec_keep_timer_callback(void* arg) {
     s_local_stop_pending = false;
 }
 
+/**
+ * @brief Initialize DJI protocol module
+ * @return ESP_OK on success, error code otherwise
+ * @note Initializes DJI protocol state machine, restores Rec Keep mode from NVS, and creates Rec Keep timer
+ */
 esp_err_t dji_protocol_init(void) {
     ESP_LOGI(TAG, "Initializing DJI protocol...");
     s_dji_state = DJI_STATE_IDLE;
@@ -138,6 +152,13 @@ esp_err_t dji_protocol_init(void) {
     return ESP_OK;
 }
 
+/**
+ * @brief Start DJI pairing process
+ * @param is_first_pairing true for first-time pairing, false for reconnection
+ * @return ESP_OK on success, ESP_ERR_INVALID_STATE if not connected
+ * @details Initiates pairing with the DJI camera. Sends connection request and handles
+ *          the pairing handshake. Can be used for first-time pairing or reconnection.
+ */
 esp_err_t dji_start_pairing(bool is_first_pairing) {
     const ble_connection_t *conn = ble_get_connection();
     if (conn == NULL || !conn->is_connected) {
@@ -199,6 +220,11 @@ esp_err_t dji_start_pairing(bool is_first_pairing) {
     return ESP_OK;
 }
 
+/**
+ * @brief Subscribe to camera status updates
+ * @return ESP_OK on success, ESP_ERR_INVALID_STATE if not connected
+ * @note Configures the camera to send periodic status updates (2Hz) and status change notifications
+ */
 esp_err_t dji_subscribe_status(void) {
     const ble_connection_t *conn = ble_get_connection();
     if (conn == NULL || !conn->is_connected) {
@@ -241,6 +267,13 @@ esp_err_t dji_subscribe_status(void) {
     return ESP_OK;
 }
 
+/**
+ * @brief Handle BLE notification from DJI camera
+ * @param data Pointer to notification data
+ * @param length Length of notification data
+ * @details Parses incoming DJI protocol frames and handles pairing, status updates,
+ *          and recording state changes. Manages Rec Keep mode logic.
+ */
 void dji_handle_notification(const uint8_t *data, uint16_t length) {
     /* Quick filter: Check if data starts with 0xAA (DJI protocol SOF) */
     /* クイックフィルタ：0xAA（DJIプロトコルSOF）で始まるか確認 */
@@ -460,16 +493,29 @@ void dji_handle_notification(const uint8_t *data, uint16_t length) {
     }
 }
 
+/**
+ * @brief Get current DJI protocol state
+ *
+ * @return Current DJI state
+ */
 dji_state_t dji_get_state(void) {
     return s_dji_state;
 }
 
+/**
+ * @brief Register callback for DJI state changes
+ * @param callback Pointer to callback function, NULL to unregister
+ */
 void dji_set_state_callback(void (*callback)(dji_state_t)) {
     s_state_callback = callback;
 }
 
-/* Internal helper: Send recording command */
-/* 内部ヘルパー: 録画コマンド送信 */
+/**
+ * @brief Send recording command to camera
+ * @param start true to start recording, false to stop recording
+ * @return ESP_OK on success, ESP_ERR_INVALID_STATE if not paired
+ * @note Manages Rec Keep mode state and local stop flag
+ */
 static esp_err_t dji_send_record_command(bool start) {
     const ble_connection_t *conn = ble_get_connection();
     if (conn == NULL || !conn->is_connected) {
@@ -535,8 +581,11 @@ static esp_err_t dji_send_record_command(bool start) {
     return ESP_OK;
 }
 
-/* Public API: Toggle recording */
-/* パブリックAPI: 録画切り替え */
+/**
+ * @brief Toggle recording state
+ * @return ESP_OK on success, error code otherwise
+ * @note Starts recording if stopped, stops recording if recording
+ */
 esp_err_t dji_toggle_recording(void) {
     /* Start recording if stopped, stop if recording */
     /* 録画停止中なら開始、録画中なら停止 */
@@ -544,6 +593,10 @@ esp_err_t dji_toggle_recording(void) {
     return dji_send_record_command(should_start);
 }
 
+/**
+ * @brief Reset DJI protocol state
+ * @note Resets the DJI protocol state machine to IDLE and cancels any pending timers
+ */
 void dji_reset_state(void) {
     ESP_LOGI(TAG, "Resetting DJI protocol state...");
     s_dji_state = DJI_STATE_IDLE;
@@ -561,10 +614,21 @@ void dji_reset_state(void) {
     }
 }
 
+/**
+ * @brief Check if camera is currently recording
+ *
+ * @return true if recording, false otherwise
+ */
 bool dji_is_recording(void) {
     return s_is_recording;
 }
 
+/**
+ * @brief Set Rec Keep mode
+ * @param enabled true to enable Rec Keep mode, false to disable
+ * @return ESP_OK on success
+ * @note When enabled, automatically restarts recording 3 seconds after an external stop is detected
+ */
 esp_err_t dji_set_rec_keep_mode(bool enabled) {
     s_rec_keep_enabled = enabled;
     ESP_LOGI(TAG, "Rec Keep mode: %s", enabled ? "ON" : "OFF");
@@ -578,14 +642,29 @@ esp_err_t dji_set_rec_keep_mode(bool enabled) {
     return ESP_OK;
 }
 
+/**
+ * @brief Check if Rec Keep mode is enabled
+ *
+ * @return true if Rec Keep mode is enabled, false otherwise
+ */
 bool dji_is_rec_keep_mode_enabled(void) {
     return s_rec_keep_enabled;
 }
 
+/**
+ * @brief Register callback for Rec Keep mode changes
+ * @param callback Pointer to callback function, NULL to unregister
+ */
 void dji_set_rec_keep_callback(void (*callback)(bool)) {
     s_rec_keep_callback = callback;
 }
 
+/**
+ * @brief Get current recording time
+ * @return Recording time in seconds, 0 if not recording
+ * @details Returns the recording time in seconds. Prioritizes BLE notification data,
+ *          falls back to internal timer if BLE data is not yet available.
+ */
 uint16_t dji_get_recording_time(void) {
     /* Priority: Use BLE notification record_time if available (includes pre-recording) */
     /* 優先度: BLE通知のrecord_timeを使用（プリレコーディング時間を含む） */
@@ -605,24 +684,35 @@ uint16_t dji_get_recording_time(void) {
     return 0;  /* Not recording / 録画していない */
 }
 
+/**
+ * @brief Get camera device ID
+ * @return Camera device ID received during pairing
+ */
 uint32_t dji_get_device_id(void) {
     return s_camera_device_id;
 }
 
-/* Get camera battery level */
-/* カメラバッテリー残量を取得 */
+/**
+ * @brief Get camera battery level
+ * @return Battery level (0-100%), 0 if unavailable
+ */
 uint8_t dji_get_camera_battery_level(void) {
     return s_camera_battery_level;
 }
 
-/* Get SD card remaining capacity in MB */
-/* SDカード残り容量を取得 (MB) */
+/**
+ * @brief Get SD card remaining capacity in MB
+ * @return Remaining capacity in MB
+ */
 uint32_t dji_get_sd_remaining_mb(void) {
     return s_sd_remaining_mb;
 }
 
-/* Get SD card remaining capacity percentage (0-100) */
-/* SDカード残り容量パーセンテージを取得 (0-100) */
+/**
+ * @brief Get SD card remaining capacity percentage
+ * @return Remaining capacity percentage (0-100), 0 if total capacity unknown
+ * @note Requires total capacity to be known
+ */
 uint8_t dji_get_sd_capacity_percentage(void) {
     /* Calculate percentage if total capacity is known */
     /* 総容量がわかる場合はパーセンテージ計算 */
@@ -632,14 +722,18 @@ uint8_t dji_get_sd_capacity_percentage(void) {
     return 0;
 }
 
-/* Get estimated remaining photos */
-/* 撮影可能残り枚数を取得 */
+/**
+ * @brief Get estimated remaining photos
+ * @return Remaining photo count
+ */
 uint32_t dji_get_sd_remaining_photos(void) {
     return s_sd_remaining_photos;
 }
 
-/* Get estimated remaining recording time (seconds) */
-/* 残り録画時間を取得 (秒) */
+/**
+ * @brief Get estimated remaining recording time
+ * @return Remaining recording time in seconds
+ */
 uint32_t dji_get_sd_remaining_time(void) {
     return s_sd_remaining_time;
 }

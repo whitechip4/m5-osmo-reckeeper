@@ -21,8 +21,10 @@ extern "C" {
 
 static const char *TAG = "status_upd";
 
-/* Update recording time state
- * Only updates when recording and time changes */
+/**
+ * @brief Update recording time state
+ * @note Updates UI state when recording time changes (only during recording)
+ */
 static void update_recording_time(void) {
     static uint16_t last_rec_time = 0xFFFF;
     uint16_t rec_time = dji_get_recording_time();
@@ -35,8 +37,10 @@ static void update_recording_time(void) {
     }
 }
 
-/* Update battery state (device + camera)
- * Only updates when value changes */
+/**
+ * @brief Update battery state
+ * @note Updates UI state when device or camera battery level changes
+ */
 static void update_battery(void) {
     static int last_device_battery = -2;  /* Initialize to impossible value */
     static int last_camera_battery = -1;
@@ -52,8 +56,10 @@ static void update_battery(void) {
     }
 }
 
-/* Update SD card state
- * Only updates when value changes */
+/**
+ * @brief Update SD card state
+ * @note Updates UI state when SD card remaining time changes
+ */
 static void update_sd_card(void) {
     static uint32_t last_sd_remaining_time = 0xFFFFFFFF;
     uint32_t current_sd_time = dji_get_sd_remaining_time();
@@ -64,9 +70,12 @@ static void update_sd_card(void) {
     }
 }
 
-/* Update GPS polling and state
- * Polls GPS at configured interval
- * Sends GPS data to camera when paired and GPS is available */
+/**
+ * @brief Update GPS polling and state
+ * @param dji_state Current DJI protocol state
+ * @details Polls GPS module at configured interval and sends GPS data to camera
+ *          when paired and GPS is available. Updates UI state when GPS status changes.
+ */
 static void update_gps(dji_state_t dji_state) {
     static gps_status_t last_gps_status = GPS_STATUS_STANDBY;
     static uint8_t last_siv = 0xFF;
@@ -112,6 +121,11 @@ static void update_gps(dji_state_t dji_state) {
 
 /* ========== Public Interface ========== */
 
+/**
+ * @brief Update all status information
+ * @details Updates recording time, battery, SD card, and GPS states based on
+ *          current DJI protocol state. Should be called periodically in main loop.
+ */
 void status_update_all(void) {
     dji_state_t dji_state = dji_get_state();
 

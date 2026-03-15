@@ -50,7 +50,10 @@ static const gps_display_info_t gps_status_display[] = {
 
 /* ========== Rendering Helper Functions ========== */
 
-/* Draw GPS status at top-center */
+/**
+ * @brief Draw GPS status at top-center
+ * @note Displays GPS status text and satellite count (when available)
+ */
 static void render_gps_status(void) {
     const display_state_t *state = ui_state_get();
     const ui_layout_t *layout = ui_get_layout();
@@ -75,7 +78,10 @@ static void render_gps_status(void) {
     }
 }
 
-/* Draw battery indicators at top-left */
+/**
+ * @brief Draw battery indicators at top-left
+ * @note Displays device battery, camera battery, and SD card remaining time
+ */
 static void render_battery_indicators(void) {
     const display_state_t *state = ui_state_get();
     const ui_layout_t *layout = ui_get_layout();
@@ -120,7 +126,10 @@ static void render_battery_indicators(void) {
     }
 }
 
-/* Draw Rec Keep indicator at top-right */
+/**
+ * @brief Draw Rec Keep indicator at top-right
+ * @note Displays Rec Keep mode status (ON in red, OFF in green)
+ */
 static void render_rec_keep_indicator(void) {
     const display_state_t *state = ui_state_get();
     int display_width = M5_display_width();
@@ -137,7 +146,10 @@ static void render_rec_keep_indicator(void) {
     }
 }
 
-/* Draw device ID line at bottom */
+/**
+ * @brief Draw device ID line at bottom
+ * @note Displays Osmo360 device ID when connected
+ */
 static void render_device_id(void) {
     const display_state_t *state = ui_state_get();
     const ui_layout_t *layout = ui_get_layout();
@@ -157,7 +169,13 @@ static void render_device_id(void) {
     M5Sprite_drawString(s_buffer, osmo_id_buf, layout->center_x, layout->y_line3);
 }
 
-/* Draw recording icon (circle for REC, square for STOP) */
+/**
+ * @brief Draw recording icon
+ * @param is_recording true to draw REC icon, false for STOP icon
+ * @param center_x Center X coordinate
+ * @param y Y coordinate
+ * @note Draws red circle for REC, green square for STOP
+ */
 static void render_recording_icon(bool is_recording, int center_x, int y) {
     int text_x_start = center_x - 25;
 
@@ -183,7 +201,10 @@ static void render_recording_icon(bool is_recording, int center_x, int y) {
     }
 }
 
-/* Draw main state display */
+/**
+ * @brief Draw main state display
+ * @note Renders the appropriate UI based on current DJI protocol state
+ */
 static void render_main_state(void) {
     const display_state_t *state = ui_state_get();
     const ui_layout_t *layout = ui_get_layout();
@@ -261,7 +282,10 @@ static void render_main_state(void) {
     }
 }
 
-/* Draw power off screen */
+/**
+ * @brief Draw power off screen
+ * @note Renders power off/reset guide, countdown, or goodbye message
+ */
 static void render_poweroff_screen(void) {
     const display_state_t *state = ui_state_get();
     const ui_layout_t *layout = ui_get_layout();
@@ -303,6 +327,11 @@ static void render_poweroff_screen(void) {
 
 /* ========== Public Interface ========== */
 
+/**
+ * @brief Initialize UI renderer
+ * @return true on success, false on failure
+ * @note Creates sprite buffer for double buffering
+ */
 bool ui_renderer_init(void) {
     if (s_buffer != NULL) {
         ESP_LOGW(TAG, "Renderer already initialized");
@@ -322,6 +351,10 @@ bool ui_renderer_init(void) {
     return true;
 }
 
+/**
+ * @brief Render UI to display
+ * @note Clears buffer, draws all UI elements, and pushes to display in single operation
+ */
 void ui_renderer_render(void) {
     if (!s_buffer) {
         ESP_LOGW(TAG, "Renderer not initialized");
@@ -350,6 +383,10 @@ void ui_renderer_render(void) {
     M5Sprite_push(s_buffer, 0, 0);
 }
 
+/**
+ * @brief Clean up UI renderer
+ * @note Releases sprite buffer memory
+ */
 void ui_renderer_cleanup(void) {
     if (s_buffer) {
         M5Sprite_destroy(s_buffer);

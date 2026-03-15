@@ -34,8 +34,11 @@ static const char *TAG = "button_handlers";
 
 /* ========== Internal Helper Functions ========== */
 
-/* Try to initiate BLE connection
- * Returns: true if connection initiated successfully */
+/**
+ * @brief Try to initiate BLE connection
+ * @return true if connection initiated successfully, false otherwise
+ * @note Starts BLE scanning or connects to saved device
+ */
 static bool btn_try_connect(void) {
     ESP_LOGI(TAG, "Button pressed, connecting...");
     esp_err_t ret = ble_connect_or_scan();
@@ -46,8 +49,11 @@ static bool btn_try_connect(void) {
     return true;
 }
 
-/* Toggle recording state
- * Returns: true if toggle initiated successfully */
+/**
+ * @brief Toggle recording state
+ * @return true if toggle initiated successfully, false otherwise
+ * @note Starts recording if stopped, stops recording if started
+ */
 static bool btn_toggle_recording(void) {
     ESP_LOGI(TAG, "Button pressed, toggling recording...");
     esp_err_t ret = dji_toggle_recording();
@@ -58,17 +64,21 @@ static bool btn_toggle_recording(void) {
     return true;
 }
 
-/* Disconnect BLE
- * Returns: true if disconnection initiated successfully */
+/**
+ * @brief Disconnect BLE
+ * @return true (always succeeds)
+ */
 static bool btn_disconnect(void) {
     ESP_LOGI(TAG, "Button pressed, disconnecting...");
     ble_disconnect();
     return true;
 }
 
-/* PWR button countdown loop
- * Blocks until button released or 3 seconds elapse
- * Returns: BTN_ACTION_RESET or BTN_ACTION_POWER_OFF */
+/**
+ * @brief PWR button countdown loop
+ * @return BTN_ACTION_RESET if button released, BTN_ACTION_POWER_OFF if held for 3 seconds
+ * @details Blocks until button is released or 3 seconds elapse. Shows countdown (3, 2, 1).
+ */
 static button_action_t btn_pwr_countdown_loop(void) {
     bool button_released = false;
 
@@ -102,7 +112,14 @@ static button_action_t btn_pwr_countdown_loop(void) {
 
 /* ========== Public Interface ========== */
 
-/* Handle button A press */
+/**
+ * @brief Handle button A press
+ * @return Button action performed
+ * @details Performs action based on current BLE and DJI states:
+ *          IDLE: Start BLE connection
+ *          CONNECTED + PAIRED/RECORDING: Toggle recording
+ *          CONNECTED + not PAIRED: Disconnect
+ */
 button_action_t btn_handle_a_press(void) {
     ble_state_t ble_state = ble_get_state();
     dji_state_t dji_state = dji_get_state();
@@ -127,7 +144,11 @@ button_action_t btn_handle_a_press(void) {
     return BTN_ACTION_NONE;
 }
 
-/* Handle button B press */
+/**
+ * @brief Handle button B press
+ * @return BTN_ACTION_TOGGLE_REC_KEEP if toggled, BTN_ACTION_NONE otherwise
+ * @note Toggles Rec Keep mode when paired or recording
+ */
 button_action_t btn_handle_b_press(void) {
     dji_state_t dji_state = dji_get_state();
 
@@ -145,7 +166,12 @@ button_action_t btn_handle_b_press(void) {
     return BTN_ACTION_NONE;
 }
 
-/* Handle PWR button press (blocking call with countdown) */
+/**
+ * @brief Handle PWR button press (blocking call with countdown)
+ * @return BTN_ACTION_RESET or BTN_ACTION_POWER_OFF (function may not return if power off succeeds)
+ * @details Shows power off/reset guide and runs countdown loop.
+ *          Restarts device if button released, powers off if held for 3 seconds.
+ */
 button_action_t btn_handle_pwr_press(void) {
     ESP_LOGI(TAG, "PWR button pressed, starting countdown...");
 

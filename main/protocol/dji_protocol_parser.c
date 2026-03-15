@@ -50,6 +50,17 @@ static const char *TAG = "DJI_PARSER";
     (data_length) +                               \
     PROTOCOL_TAIL_LENGTH)
 
+/**
+ * @brief Parse DJI protocol notification frame
+ * @param frame_data Pointer to frame data buffer
+ * @param frame_length Length of frame data
+ * @param frame_out Pointer to output structure for parsed frame
+ * @return 0 on success, negative error code on failure:
+ *         -1: Frame too short, -2: Invalid SOF, -3: Length mismatch,
+ *         -4: CRC-16 mismatch, -5: CRC-32 mismatch
+ * @details Validates and parses incoming DJI protocol frames. Checks SOF, length,
+ *          CRC-16, and CRC-32. Extracts frame fields and data segment.
+ */
 int protocol_parse_notification(const uint8_t *frame_data, size_t frame_length,
                                  protocol_frame_t *frame_out)
 {
@@ -129,6 +140,17 @@ int protocol_parse_notification(const uint8_t *frame_data, size_t frame_length,
     return 0;
 }
 
+/**
+ * @brief Create DJI protocol frame
+ * @param cmd_set Command set byte
+ * @param cmd_id Command ID byte
+ * @param cmd_type Command type byte
+ * @param structure Pointer to command structure to serialize
+ * @param seq Sequence number
+ * @param frame_length_out Pointer to receive frame length
+ * @return Pointer to allocated frame buffer (caller must free), NULL on error
+ * @note Builds a complete DJI protocol frame with header, payload, and CRC values
+ */
 uint8_t* protocol_create_frame(uint8_t cmd_set, uint8_t cmd_id,
                                 uint8_t cmd_type, const void *structure,
                                 uint16_t seq, size_t *frame_length_out)

@@ -24,6 +24,10 @@ static const char *TAG = "M5Wrapper";
 /* Cラッパー関数 */
 extern "C" {
 
+/**
+ * @brief Initialize M5StickC Plus2
+ * @note Initializes M5Unified, sets display rotation to landscape (90° right), disables IMU for power saving
+ */
 void M5_begin(void) {
     ::M5.begin();
     /* Set display rotation to landscape (right 90 degrees) */
@@ -35,48 +39,101 @@ void M5_begin(void) {
     ::M5.Imu.sleep();
 }
 
+/**
+ * @brief Update button states
+ * @note Must be called periodically to detect button presses
+ */
 void M5_update(void) {
     ::M5.update();
 }
 
+/**
+ * @brief Get display width
+ * @return Display width in pixels
+ */
 int M5_display_width(void) {
     return ::M5.Display.width();
 }
 
+/**
+ * @brief Get display height
+ * @return Display height in pixels
+ */
 int M5_display_height(void) {
     return ::M5.Display.height();
 }
 
+/**
+ * @brief Fill entire display with color
+ * @param color Color value in RGB888 format
+ */
 void M5_display_fillScreen(int color) {
     ::M5.Display.fillScreen((uint32_t)color);
 }
 
+/**
+ * @brief Set text color
+ * @param textcolor Text color in RGB888 format
+ * @param textbgcolor Background color in RGB888 format
+ */
 void M5_display_setTextColor(int textcolor, int textbgcolor) {
     ::M5.Display.setTextColor((uint32_t)textcolor, (uint32_t)textbgcolor);
 }
 
+/**
+ * @brief Set text datum (alignment reference point)
+ * @param datum Text datum value (0=top_left, 1=top_center, 2=top_right, etc.)
+ */
 void M5Display_setTextDatum(int datum) {
     ::M5.Display.setTextDatum((textdatum_t)datum);
 }
 
+/**
+ * @brief Set text size
+ * @param size Text size multiplier
+ */
 void M5_display_setTextSize(float size) {
     ::M5.Display.setTextSize(size);
 }
 
+/**
+ * @brief Draw string at specified position
+ * @param string String to draw
+ * @param x X coordinate
+ * @param y Y coordinate
+ */
 void M5_display_drawString(const char *string, int x, int y) {
     ::M5.Display.drawString(string, x, y);
 }
 
-/* Graphics drawing functions */
-/* グラフィック描画関数 */
+/**
+ * @brief Draw filled rectangle
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @param w Width in pixels
+ * @param h Height in pixels
+ * @param color Color in RGB888 format
+ */
 void M5_display_fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color) {
     ::M5.Display.fillRect(x, y, w, h, color);
 }
 
+/**
+ * @brief Draw filled circle
+ * @param x Center X coordinate
+ * @param y Center Y coordinate
+ * @param r Radius in pixels
+ * @param color Color in RGB888 format
+ */
 void M5_display_fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color) {
     ::M5.Display.fillCircle(x, y, r, color);
 }
 
+/**
+ * @brief Check if button A was just pressed (rising edge)
+ * @return 1 if button was just pressed, 0 otherwise
+ * @note Detects rising edge (false -> true), requires M5_update() to be called periodically
+ */
 int M5_BtnA_wasPressed(void) {
     bool current_state = ::M5.BtnA.isPressed();
 
@@ -91,6 +148,11 @@ int M5_BtnA_wasPressed(void) {
     return 0;
 }
 
+/**
+ * @brief Check if button B was just pressed (rising edge)
+ * @return 1 if button was just pressed, 0 otherwise
+ * @note Detects rising edge (false -> true), requires M5_update() to be called periodically
+ */
 int M5_BtnB_wasPressed(void) {
     bool current_state = ::M5.BtnB.isPressed();
 
@@ -106,9 +168,13 @@ int M5_BtnB_wasPressed(void) {
 }
 
 /* PWR button detection */
-/* PWRボタン検出 */
 static bool last_btnpwr_state = false;
 
+/**
+ * @brief Check if PWR button was just pressed (rising edge)
+ * @return 1 if button was just pressed, 0 otherwise
+ * @note Detects rising edge (false -> true), requires M5_update() to be called periodically
+ */
 int M5_BtnPWR_wasPressed(void) {
     bool current_state = ::M5.BtnPWR.isPressed();
 
@@ -123,20 +189,34 @@ int M5_BtnPWR_wasPressed(void) {
     return 0;
 }
 
+/**
+ * @brief Check if PWR button is currently pressed
+ * @return 1 if button is pressed, 0 otherwise
+ */
 int M5_BtnPWR_isPressed(void) {
     return ::M5.BtnPWR.isPressed() ? 1 : 0;
 }
 
-/* Power management */
-/* 電源管理 */
+/**
+ * @brief Restart the device
+ * @note Performs a system restart (ESP32 restart)
+ */
 void M5_Power_restart(void) {
     esp_restart();
 }
 
+/**
+ * @brief Power off the device
+ * @note Performs a clean power off
+ */
 void M5_Power_off(void) {
     ::M5.Power.powerOff();
 }
 
+/**
+ * @brief Get device battery level
+ * @return Battery level percentage (0-100)
+ */
 int M5_Power_getBatteryLevel(void) {
     return (int)::M5.Power.getBatteryLevel();
 }
@@ -150,7 +230,13 @@ struct sprite_buffer {
     LGFX_Sprite *sprite;
 };
 
-/* Create sprite buffer */
+/**
+ * @brief Create sprite buffer for double buffering
+ * @param width Buffer width in pixels
+ * @param height Buffer height in pixels
+ * @return Pointer to sprite buffer, NULL on failure
+ * @note Creates off-screen sprite buffer for flicker-free rendering
+ */
 sprite_buffer_t* M5Sprite_create(int32_t width, int32_t height) {
     sprite_buffer_t *buffer = (sprite_buffer_t *)malloc(sizeof(sprite_buffer_t));
     if (!buffer) {
@@ -179,7 +265,10 @@ sprite_buffer_t* M5Sprite_create(int32_t width, int32_t height) {
     return buffer;
 }
 
-/* Destroy sprite buffer */
+/**
+ * @brief Destroy sprite buffer
+ * @param sprite Pointer to sprite buffer (safe to pass NULL)
+ */
 void M5Sprite_destroy(sprite_buffer_t* sprite) {
     if (!sprite) {
         return;
@@ -194,56 +283,108 @@ void M5Sprite_destroy(sprite_buffer_t* sprite) {
     ESP_LOGI(TAG, "Sprite buffer destroyed");
 }
 
-/* Fill sprite with color */
+/**
+ * @brief Fill sprite buffer with color
+ * @param sprite Pointer to sprite buffer
+ * @param color Color in RGB888 format
+ */
 void M5Sprite_fillScreen(sprite_buffer_t* sprite, uint32_t color) {
     if (sprite && sprite->sprite) {
         sprite->sprite->fillScreen(color);
     }
 }
 
-/* Set text color */
+/**
+ * @brief Set sprite text color
+ *
+ * @param sprite Pointer to sprite buffer
+ * @param textcolor Text color in RGB888 format
+ * @param textbgcolor Background color in RGB888 format
+ */
 void M5Sprite_setTextColor(sprite_buffer_t* sprite, uint32_t textcolor, uint32_t textbgcolor) {
     if (sprite && sprite->sprite) {
         sprite->sprite->setTextColor(textcolor, textbgcolor);
     }
 }
 
-/* Set text datum */
+/**
+ * @brief Set sprite text datum (alignment reference point)
+ *
+ * @param sprite Pointer to sprite buffer
+ * @param datum Text datum value (0=top_left, 1=top_center, 2=top_right, etc.)
+ */
 void M5Sprite_setTextDatum(sprite_buffer_t* sprite, int datum) {
     if (sprite && sprite->sprite) {
         sprite->sprite->setTextDatum((textdatum_t)datum);
     }
 }
 
-/* Set text size */
+/**
+ * @brief Set sprite text size
+ *
+ * @param sprite Pointer to sprite buffer
+ * @param size Text size multiplier
+ */
 void M5Sprite_setTextSize(sprite_buffer_t* sprite, float size) {
     if (sprite && sprite->sprite) {
         sprite->sprite->setTextSize(size);
     }
 }
 
-/* Draw string */
+/**
+ * @brief Draw string on sprite buffer
+ *
+ * @param sprite Pointer to sprite buffer
+ * @param string String to draw
+ * @param x X coordinate
+ * @param y Y coordinate
+ */
 void M5Sprite_drawString(sprite_buffer_t* sprite, const char *string, int x, int y) {
     if (sprite && sprite->sprite) {
         sprite->sprite->drawString(string, x, y);
     }
 }
 
-/* Fill rectangle */
+/**
+ * @brief Draw filled rectangle on sprite buffer
+ *
+ * @param sprite Pointer to sprite buffer
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @param w Width in pixels
+ * @param h Height in pixels
+ * @param color Color in RGB888 format
+ */
 void M5Sprite_fillRect(sprite_buffer_t* sprite, int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color) {
     if (sprite && sprite->sprite) {
         sprite->sprite->fillRect(x, y, w, h, color);
     }
 }
 
-/* Fill circle */
+/**
+ * @brief Draw filled circle on sprite buffer
+ *
+ * @param sprite Pointer to sprite buffer
+ * @param x Center X coordinate
+ * @param y Center Y coordinate
+ * @param r Radius in pixels
+ * @param color Color in RGB888 format
+ */
 void M5Sprite_fillCircle(sprite_buffer_t* sprite, int32_t x, int32_t y, int32_t r, uint32_t color) {
     if (sprite && sprite->sprite) {
         sprite->sprite->fillCircle(x, y, r, color);
     }
 }
 
-/* Push sprite to display (atomic update) */
+/**
+ * @brief Push sprite buffer to display (atomic update)
+ *
+ * Copies the entire sprite buffer to the display in a single operation.
+ *
+ * @param sprite Pointer to sprite buffer
+ * @param x Destination X coordinate
+ * @param y Destination Y coordinate
+ */
 void M5Sprite_push(sprite_buffer_t* sprite, int32_t x, int32_t y) {
     if (sprite && sprite->sprite) {
         sprite->sprite->pushSprite(&::M5.Display, x, y);

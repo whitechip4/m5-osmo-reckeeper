@@ -19,6 +19,11 @@ static const char *TAG = "STORAGE";
 #define MAC_ADDR_SIZE 6
 #define KEY_REC_KEEP_MODE "rec_keep_mode"
 
+/**
+ * @brief Initialize storage module
+ * @return ESP_OK (always succeeds)
+ * @note NVS is initialized in ble_init(), this function verifies storage is ready
+ */
 esp_err_t storage_init(void) {
     ESP_LOGI(TAG, "Initializing storage...");
 
@@ -28,6 +33,11 @@ esp_err_t storage_init(void) {
     return ESP_OK;
 }
 
+/**
+ * @brief Save paired device MAC address to NVS
+ * @param mac_addr Pointer to 6-byte MAC address
+ * @return ESP_OK on success, ESP_ERR_INVALID_ARG if mac_addr is NULL
+ */
 esp_err_t storage_save_paired_device(const uint8_t *mac_addr) {
     if (mac_addr == NULL) {
         ESP_LOGE(TAG, "MAC address is NULL");
@@ -62,6 +72,12 @@ esp_err_t storage_save_paired_device(const uint8_t *mac_addr) {
     return ESP_OK;
 }
 
+/**
+ * @brief Get paired device MAC address from NVS
+ * @param mac_addr Pointer to 6-byte buffer to store MAC address
+ * @param is_found Pointer to boolean that will be set to true if device found
+ * @return ESP_OK on success, ESP_ERR_INVALID_ARG if pointers are NULL
+ */
 esp_err_t storage_get_paired_device(uint8_t *mac_addr, bool *is_found) {
     if (mac_addr == NULL || is_found == NULL) {
         ESP_LOGE(TAG, "Invalid arguments");
@@ -103,6 +119,10 @@ esp_err_t storage_get_paired_device(uint8_t *mac_addr, bool *is_found) {
     return err;
 }
 
+/**
+ * @brief Check if a device is paired
+ * @return true if paired device is saved in NVS, false otherwise
+ */
 bool storage_is_paired(void) {
     uint8_t mac_addr[MAC_ADDR_SIZE];
     bool is_found = false;
@@ -113,6 +133,11 @@ bool storage_is_paired(void) {
     return false;
 }
 
+/**
+ * @brief Clear paired device information from NVS
+ * @return ESP_OK on success, error code otherwise
+ * @note Removes the saved MAC address from storage
+ */
 esp_err_t storage_clear_paired_device(void) {
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &nvs_handle);
@@ -143,6 +168,11 @@ esp_err_t storage_clear_paired_device(void) {
     return err;
 }
 
+/**
+ * @brief Save Rec Keep mode to NVS
+ * @param enabled true to enable Rec Keep mode, false to disable
+ * @return ESP_OK on success, error code otherwise
+ */
 esp_err_t storage_save_rec_keep_mode(bool enabled) {
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &nvs_handle);
@@ -171,6 +201,12 @@ esp_err_t storage_save_rec_keep_mode(bool enabled) {
     return ESP_OK;
 }
 
+/**
+ * @brief Get Rec Keep mode from NVS
+ * @param enabled Pointer to boolean that will be set to mode state
+ * @param is_found Pointer to boolean that will be set to true if mode found in storage
+ * @return ESP_OK on success, ESP_ERR_INVALID_ARG if pointers are NULL
+ */
 esp_err_t storage_get_rec_keep_mode(bool *enabled, bool *is_found) {
     if (enabled == NULL || is_found == NULL) {
         ESP_LOGE(TAG, "Invalid arguments");

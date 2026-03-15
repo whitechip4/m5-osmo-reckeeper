@@ -48,6 +48,13 @@ static const crc32_t crc32_table[256] = {
     0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
+/**
+ * @brief Update CRC-32 with data
+ * @param crc Current CRC value (use crc32_init() for first call)
+ * @param data Pointer to data buffer
+ * @param data_len Length of data in bytes
+ * @return Updated CRC-32 value
+ */
 crc32_t crc32_update(crc32_t crc, const void *data, size_t data_len)
 {
     const unsigned char *d = (const unsigned char *)data;
@@ -61,6 +68,12 @@ crc32_t crc32_update(crc32_t crc, const void *data, size_t data_len)
     return crc & 0xffffffff;
 }
 
+/**
+ * @brief Calculate CRC-32 checksum
+ * @param data Pointer to data buffer
+ * @param length Length of data in bytes
+ * @return CRC-32 checksum
+ */
 uint32_t calculate_crc32(const uint8_t *data, size_t length) {
     crc32_t crc = crc32_init();
     crc = crc32_update(crc, data, length);

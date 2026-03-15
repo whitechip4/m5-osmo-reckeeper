@@ -14,9 +14,13 @@
 #define TFT_GREEN   0x00FF00
 #define TFT_YELLOW  0xFFFF00
 
-/* Get battery color based on level
- * Device battery: <20% red, >=20% green
- * Camera battery: <10% red, 10-19% yellow, >=20% green */
+/**
+ * @brief Get battery color based on level
+ * @param battery_level Battery level percentage (0-100)
+ * @param is_device true for device battery, false for camera battery
+ * @return Color value in RGB888 format
+ * @note Device battery: <20% red, >=20% green; Camera battery: <10% red, 10-19% yellow, >=20% green
+ */
 uint32_t dh_get_battery_color(uint8_t battery_level, bool is_device) {
     if (is_device) {
         return (battery_level < 20) ? TFT_RED : TFT_GREEN;
@@ -31,7 +35,12 @@ uint32_t dh_get_battery_color(uint8_t battery_level, bool is_device) {
     }
 }
 
-/* Format recording time as HH:MM:SS */
+/**
+ * @brief Format recording time as HH:MM:SS
+ * @param seconds Total recording time in seconds
+ * @param buffer Output buffer for formatted string
+ * @param size Size of output buffer
+ */
 void dh_format_recording_time(uint16_t seconds, char *buffer, size_t size) {
     uint16_t hours = seconds / 3600;
     uint16_t mins = (seconds % 3600) / 60;
@@ -39,7 +48,13 @@ void dh_format_recording_time(uint16_t seconds, char *buffer, size_t size) {
     snprintf(buffer, size, "%02u:%02u:%02u", hours, mins, secs);
 }
 
-/* Format device ID as 4-character hex string */
+/**
+ * @brief Format device ID as 4-character hex string
+ * @param device_id Device ID value
+ * @param buffer Output buffer for formatted string
+ * @param size Size of output buffer
+ * @note Returns empty string if device_id is 0
+ */
 void dh_format_device_id(uint32_t device_id, char *buffer, size_t size) {
     if (device_id == 0) {
         buffer[0] = '\0';  /* Return empty string / 空文字を返す */
@@ -48,7 +63,13 @@ void dh_format_device_id(uint32_t device_id, char *buffer, size_t size) {
     }
 }
 
-/* Format battery text */
+/**
+ * @brief Format battery text
+ * @param battery Battery level (0-100), -1 for error
+ * @param prefix Text prefix (e.g., "Bat", "CAMBat")
+ * @param buffer Output buffer for formatted string
+ * @param size Size of output buffer
+ */
 void dh_format_battery_text(int battery, const char *prefix, char *buffer, size_t size) {
     if (battery < 0) {
         snprintf(buffer, size, "%s:ERR", prefix);
@@ -57,7 +78,12 @@ void dh_format_battery_text(int battery, const char *prefix, char *buffer, size_
     }
 }
 
-/* Format SD card remaining time as "SD:XhYm" or "SD:Ymin" */
+/**
+ * @brief Format SD card remaining time
+ * @param remaining_seconds Remaining recording time in seconds
+ * @param buffer Output buffer for formatted string
+ * @param size Size of output buffer
+ */
 void dh_format_sd_time(uint32_t remaining_seconds, char *buffer, size_t size) {
     uint32_t hours = remaining_seconds / 3600;
     uint32_t mins = (remaining_seconds % 3600) / 60;
@@ -71,8 +97,12 @@ void dh_format_sd_time(uint32_t remaining_seconds, char *buffer, size_t size) {
     }
 }
 
-/* Get SD card color based on remaining time
- * <10min: red, 10-30min: yellow, >=30min: green */
+/**
+ * @brief Get SD card color based on remaining time
+ * @param remaining_seconds Remaining recording time in seconds
+ * @return Color value in RGB888 format
+ * @note <10min: red, 10-30min: yellow, >=30min: green
+ */
 uint32_t dh_get_sd_time_color(uint32_t remaining_seconds) {
     uint32_t mins = remaining_seconds / 60;
     if (mins < 10) {           /* < 10分 */

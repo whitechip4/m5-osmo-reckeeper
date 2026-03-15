@@ -25,8 +25,10 @@ int M5_display_height(void);
 /* 静的レイアウト構造体 */
 static ui_layout_t s_layout = {0};
 
-/* Initialize layout with current screen dimensions
- * Call this before using the layout structure */
+/**
+ * @brief Initialize layout with current screen dimensions
+ * @note Calculates UI element positions based on current screen size. Safe to call multiple times.
+ */
 static void init_layout(void) {
     if (s_layout.center_x != 0) {
         return;  /* Already initialized */
@@ -43,8 +45,11 @@ static void init_layout(void) {
     s_layout.y_battery_sd = 22;
 }
 
-/* Get current layout structure
- * Returns pointer to const layout with pre-calculated coordinates */
+/**
+ * @brief Get current layout structure
+ * @return Pointer to layout structure with pre-calculated coordinates
+ * @note Initializes layout on first call
+ */
 const ui_layout_t* ui_get_layout(void) {
     init_layout();
     return &s_layout;
