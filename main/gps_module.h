@@ -18,9 +18,10 @@ extern "C" {
 /* GPS status definitions */
 /* GPS状態定義 */
 typedef enum {
-    GPS_STATUS_NULL = 0,   /* Not connected / 未接続 */
-    GPS_STATUS_SEARCH = 1, /* Acquiring signal / 受信中 */
-    GPS_STATUS_OK = 2      /* Signal stable / 受信安定 */
+    GPS_STATUS_NOGPS = 0,  /* No GPS module connected / GPSモジュール未接続 */
+    GPS_STATUS_STANDBY = 1, /* NMEA data not received yet / NMEAデータ未受信 */
+    GPS_STATUS_SEARCHING = 2, /* Acquiring satellites / 衛星探索中 */
+    GPS_STATUS_OK = 3      /* Signal stable / 受信安定 */
 } gps_status_t;
 
 /* GPS data structure */

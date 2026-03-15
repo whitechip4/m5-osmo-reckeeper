@@ -415,14 +415,20 @@ static void parse_nmea_buffer(char *buffer) {
             /* Parse the line */
             /* 該当行をパース */
             if (strncmp(line, "$GNRMC", 6) == 0 || strncmp(line, "$GPRMC", 6) == 0) {
-                if (parse_gnrmc(line)) {
-                    rmc_found = true;
+                /* Always mark RMC as found if sentence exists (GPS module is working) */
+                /* RMCセンテンスが存在すれば常にfoundをマーク（GPSモジュールは動作中） */
+                parse_gnrmc(line);
+                rmc_found = true;
+                if (s_gps_data.rmc_valid) {
                     rmc_latitude = s_gps_data.latitude;
                     rmc_longitude = s_gps_data.longitude;
                 }
             } else if (strncmp(line, "$GNGGA", 6) == 0 || strncmp(line, "$GPGGA", 6) == 0) {
-                if (parse_gngga(line)) {
-                    gga_found = true;
+                /* Always mark GGA as found if sentence exists (GPS module is working) */
+                /* GGAセンテンスが存在すれば常にfoundをマーク（GPSモジュールは動作中） */
+                parse_gngga(line);
+                gga_found = true;
+                if (s_gps_data.gga_valid) {
                     gga_latitude = s_gps_data.latitude;
                     gga_longitude = s_gps_data.longitude;
                 }
@@ -436,14 +442,20 @@ static void parse_nmea_buffer(char *buffer) {
     /* 最終行を処理（改行で終わっていない場合） */
     if (*start != '\0') {
         if (strncmp(start, "$GNRMC", 6) == 0 || strncmp(start, "$GPRMC", 6) == 0) {
-            if (parse_gnrmc(start)) {
-                rmc_found = true;
+            /* Always mark RMC as found if sentence exists (GPS module is working) */
+            /* RMCセンテンスが存在すれば常にfoundをマーク（GPSモジュールは動作中） */
+            parse_gnrmc(start);
+            rmc_found = true;
+            if (s_gps_data.rmc_valid) {
                 rmc_latitude = s_gps_data.latitude;
                 rmc_longitude = s_gps_data.longitude;
             }
         } else if (strncmp(start, "$GNGGA", 6) == 0 || strncmp(start, "$GPGGA", 6) == 0) {
-            if (parse_gngga(start)) {
-                gga_found = true;
+            /* Always mark GGA as found if sentence exists (GPS module is working) */
+            /* GGAセンテンスが存在すれば常にfoundをマーク（GPSモジュールは動作中） */
+            parse_gngga(start);
+            gga_found = true;
+            if (s_gps_data.gga_valid) {
                 gga_latitude = s_gps_data.latitude;
                 gga_longitude = s_gps_data.longitude;
             }
@@ -452,24 +464,31 @@ static void parse_nmea_buffer(char *buffer) {
 
     /* Update final status and position data after parsing all sentences */
     /* 全センテンスパース後に最終状態と位置データを更新 */
-    if (rmc_found && gga_found) {
-        /* Both RMC and GGA valid data found in this buffer */
-        /* このバッファでRMCとGGAの両方の有効データを検出 */
-        s_gps_invalid_count = 0; /* Reset counter */
+    if (rmc_found || gga_found) {
+        /* At least one type of NMEA sentence found - GPS module is working */
+        /* 少なくとも1種類のNMEAセンテンスを検出 - GPSモジュールは動作中 */
+        ESP_LOGI(TAG, "GPS NMEA found: RMC=%d(%c), GGA=%d(%c), sats=%d, invalid_count=%d->0",
+                 rmc_found, s_gps_data.rmc_valid ? 'V' : 'v',
+                 gga_found, s_gps_data.gga_valid ? 'V' : 'v',
+                 s_gps_data.num_satellites, s_gps_invalid_count);
+        s_gps_invalid_count = 0; /* Reset counter / カウンターをリセット */
 
-        /* Calculate average */
-        /* 平均値を計算 */
-        s_gps_data.latitude = (rmc_latitude + gga_latitude) / 2.0;
-        s_gps_data.longitude = (rmc_longitude + gga_longitude) / 2.0;
-    } else if (rmc_found || gga_found) {
-        /* Only one type of data found - don't change invalid count */
-        /* 一方のデータのみ検出 - 無効カウンターは変更しない */
+        if (rmc_found && gga_found && s_gps_data.rmc_valid && s_gps_data.gga_valid) {
+            /* Both RMC and GGA found with valid data - calculate average for better accuracy */
+            /* RMCとGGAの両方の有効データを検出 - より正確な位置情報のため平均値を計算 */
+            s_gps_data.latitude = (rmc_latitude + gga_latitude) / 2.0;
+            s_gps_data.longitude = (rmc_longitude + gga_longitude) / 2.0;
+        }
+        /* If only one type found or data invalid, coordinates are already updated by parse functions */
+        /* 片方のみの場合やデータ無効は、座標は既にパース関数で更新されている */
     } else {
         /* No valid data found */
         /* 有効データ未検出 */
         if (s_gps_invalid_count < UINT8_MAX) {
             s_gps_invalid_count++;
         }
+        ESP_LOGW(TAG, "No NMEA sentences found, invalid_count=%d/%d",
+                 s_gps_invalid_count, GPS_INVALID_THRESHOLD);
     }
 }
 
@@ -528,7 +547,13 @@ esp_err_t gps_init(void) {
 
     /* Send GPS update rate command (10Hz) */
     /* GPS更新レートコマンド送信（10Hz） */
+    ESP_LOGI(TAG, "Sending GPS update rate command: %s", GPS_UPDATE_RATE_CMD);
     uart_write_bytes(GPS_UART_PORT, GPS_UPDATE_RATE_CMD, strlen(GPS_UPDATE_RATE_CMD));
+
+    /* Wait for GPS module to stabilize and start sending NMEA data */
+    /* GPSモジュールが安定してNMEAデータ送信を開始するのを待機 */
+    ESP_LOGI(TAG, "Waiting for GPS module to stabilize (1000ms)...");
+    vTaskDelay(pdMS_TO_TICKS(1000));
 
     /* Initialize GPS data structure */
     /* GPSデータ構造体初期化 */
@@ -547,11 +572,13 @@ esp_err_t gps_poll(void) {
 
     if (rx_bytes > 0) {
         s_rx_buffer[rx_bytes] = '\0';
+        ESP_LOGI(TAG, "GPS RX: %d bytes", rx_bytes);
 
         /* Parse NMEA data */
         /* NMEAデータをパース */
         parse_nmea_buffer((char *)s_rx_buffer);
     }
+    /* No logging for no data to reduce log spam / データなしはログ出力を抑制 */
 
     /* Always return ESP_OK in polling mode */
     /* ポーリングモードでは常にESP_OK返却 */
@@ -568,19 +595,40 @@ esp_err_t gps_get_data(gps_data_t *out_data) {
 }
 
 gps_status_t gps_get_status(void) {
+    static gps_status_t last_status = (gps_status_t)-1; /* Initialize to invalid value / 無効な値で初期化 */
+    gps_status_t current_status;
+
+    /* Check if GPS module is connected and sending data */
+    /* GPSモジュールが接続され、データを送信しているかを確認 */
     if (!gps_is_found()) {
-        return GPS_STATUS_NULL;
+        /* NOGPS: No NMEA data received for extended period */
+        /* NOGPS: 長期間NMEAデータ未受信 */
+        current_status = GPS_STATUS_NOGPS;
+    } else if (!s_gps_data.rmc_valid && !s_gps_data.gga_valid) {
+        /* STANDBY: NMEA data received but no valid position data yet */
+        /* STANDBY: NMEAデータ受信済だが有効な位置データなし */
+        current_status = GPS_STATUS_STANDBY;
+    } else if (s_gps_data.num_satellites >= GPS_OK_MIN_SATELLITES) {
+        /* OK: Sufficient satellites acquired */
+        /* OK: 十分な数の衛星を捕捉 */
+        current_status = GPS_STATUS_OK;
+    } else {
+        /* SEARCHING: Valid data but insufficient satellites */
+        /* SEARCHING: 有効データだが衛星数不足 */
+        current_status = GPS_STATUS_SEARCHING;
     }
 
-    /* Check minimum satellites - simplified criteria */
-    /* 衛星数のみで判定 - シンプルな基準 */
-    if (s_gps_data.num_satellites >= GPS_OK_MIN_SATELLITES) {
-        return GPS_STATUS_OK;
+    /* Log status change only */
+    /* 状態変化時のみログ出力 */
+    if (current_status != last_status) {
+        const char *status_str[] = {"NOGPS", "STANDBY", "SEARCHING", "OK"};
+        ESP_LOGI(TAG, "GPS status: %s (sats=%d, rmc_valid=%d, gga_valid=%d)",
+                 status_str[current_status], s_gps_data.num_satellites,
+                 s_gps_data.rmc_valid, s_gps_data.gga_valid);
+        last_status = current_status;
     }
 
-    /* Signal detected but not enough satellites yet */
-    /* 信号検出済みだが衛星数がまだ不足 */
-    return GPS_STATUS_SEARCH;
+    return current_status;
 }
 
 bool gps_is_found(void) {
