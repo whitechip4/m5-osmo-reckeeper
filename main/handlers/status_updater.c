@@ -55,12 +55,12 @@ static void update_battery(void) {
 /* Update SD card state
  * Only updates when value changes */
 static void update_sd_card(void) {
-    static uint32_t last_sd_remaining_mb = 0xFFFFFFFF;
-    uint32_t current_sd_mb = dji_get_sd_remaining_mb();
+    static uint32_t last_sd_remaining_time = 0xFFFFFFFF;
+    uint32_t current_sd_time = dji_get_sd_remaining_time();
 
-    if (current_sd_mb != last_sd_remaining_mb && current_sd_mb > 0) {
-        ui_state_set_sd(current_sd_mb);
-        last_sd_remaining_mb = current_sd_mb;
+    if (current_sd_time != last_sd_remaining_time && current_sd_time > 0) {
+        ui_state_set_sd_time(current_sd_time);
+        last_sd_remaining_time = current_sd_time;
     }
 }
 

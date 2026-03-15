@@ -31,18 +31,6 @@ uint32_t dh_get_battery_color(uint8_t battery_level, bool is_device) {
     }
 }
 
-/* Get SD card color based on remaining capacity
- * <1GB: red, 1-4GB: yellow, >=4GB: green */
-uint32_t dh_get_sd_card_color(uint32_t remaining_mb) {
-    if (remaining_mb < 1024) {        /* < 1 GB */
-        return TFT_RED;               /* Critical / 危険 */
-    } else if (remaining_mb < 4096) { /* < 4 GB */
-        return TFT_YELLOW;            /* Low / 低残量 */
-    } else {
-        return TFT_GREEN;             /* Normal / 通常 */
-    }
-}
-
 /* Format recording time as MM:SS */
 void dh_format_recording_time(uint16_t seconds, char *buffer, size_t size) {
     uint16_t mins = seconds / 60;
@@ -68,11 +56,29 @@ void dh_format_battery_text(int battery, const char *prefix, char *buffer, size_
     }
 }
 
-/* Format SD card text (auto-select MB or GB) */
-void dh_format_sd_text(uint32_t remaining_mb, char *buffer, size_t size) {
-    if (remaining_mb >= 1024) {
-        snprintf(buffer, size, "SD:%.1fGB", remaining_mb / 1024.0);
+/* Format SD card remaining time as "SD:XhYm" or "SD:Ymin" */
+void dh_format_sd_time(uint32_t remaining_seconds, char *buffer, size_t size) {
+    uint32_t hours = remaining_seconds / 3600;
+    uint32_t mins = (remaining_seconds % 3600) / 60;
+
+    if (hours > 0) {
+        /* 1時間以上: "SD:XhYm"形式 */
+        snprintf(buffer, size, "SD:%luh%lum", (unsigned long)hours, (unsigned long)mins);
     } else {
-        snprintf(buffer, size, "SD:%luMB", (unsigned long)remaining_mb);
+        /* 1時間未満: "SD:Ymin"形式 */
+        snprintf(buffer, size, "SD:%lum", (unsigned long)mins);
+    }
+}
+
+/* Get SD card color based on remaining time
+ * <10min: red, 10-30min: yellow, >=30min: green */
+uint32_t dh_get_sd_time_color(uint32_t remaining_seconds) {
+    uint32_t mins = remaining_seconds / 60;
+    if (mins < 10) {           /* < 10分 */
+        return TFT_RED;         /* Critical / 危険 */
+    } else if (mins < 30) {     /* < 30分 */
+        return TFT_YELLOW;      /* Low / 低残量 */
+    } else {
+        return TFT_GREEN;       /* Normal / 通常 */
     }
 }

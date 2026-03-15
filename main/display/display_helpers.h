@@ -21,12 +21,6 @@
  * Returns: RGB565 color value */
 uint32_t dh_get_battery_color(uint8_t battery_level, bool is_device);
 
-/* Get SD card color based on remaining capacity
- * Args:
- *   remaining_mb: Remaining capacity in megabytes
- * Returns: RGB565 color value */
-uint32_t dh_get_sd_card_color(uint32_t remaining_mb);
-
 /* Formatting functions */
 /* フォーマット関数 */
 
@@ -52,11 +46,17 @@ void dh_format_device_id(uint32_t device_id, char *buffer, size_t size);
  *   size: Buffer size */
 void dh_format_battery_text(int battery, const char *prefix, char *buffer, size_t size);
 
-/* Format SD card text
+/* Format SD card remaining time as "SD:XhYm" or "SD:Ymin"
  * Args:
- *   remaining_mb: Remaining capacity in megabytes
+ *   remaining_seconds: Remaining recording time in seconds
  *   buffer: Output buffer
  *   size: Buffer size */
-void dh_format_sd_text(uint32_t remaining_mb, char *buffer, size_t size);
+void dh_format_sd_time(uint32_t remaining_seconds, char *buffer, size_t size);
+
+/* Get SD card color based on remaining time
+ * Args:
+ *   remaining_seconds: Remaining recording time in seconds
+ * Returns: RGB565 color value */
+uint32_t dh_get_sd_time_color(uint32_t remaining_seconds);
 
 #endif /* DISPLAY_HELPERS_H */

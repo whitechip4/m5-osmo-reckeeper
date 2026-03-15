@@ -32,7 +32,7 @@ typedef struct {
         uint8_t gps_satellites;       /* Number of satellites */
         int device_battery;           /* Device battery (-1 for error) */
         int camera_battery;           /* Camera battery (0 for unavailable) */
-        uint32_t sd_remaining_mb;     /* SD card remaining capacity in MB */
+        uint32_t sd_remaining_time;   /* SD card remaining recording time (seconds) */
         bool rec_keep_enabled;        /* Rec Keep mode state */
     } status;
 
@@ -70,10 +70,10 @@ void ui_state_set_gps(gps_status_t status, uint8_t satellites);
  *   camera_batt: Camera battery percentage (0 for unavailable) */
 void ui_state_set_battery(int device_batt, int camera_batt);
 
-/* Set SD card remaining capacity
+/* Set SD card remaining recording time
  * Args:
- *   remaining_mb: Remaining capacity in megabytes */
-void ui_state_set_sd(uint32_t remaining_mb);
+ *   remaining_seconds: Remaining recording time in seconds */
+void ui_state_set_sd_time(uint32_t remaining_seconds);
 
 /* Set Rec Keep mode state
  * Args:

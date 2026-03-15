@@ -24,7 +24,7 @@ static display_state_t s_display_state = {
         .gps_satellites = 0,
         .device_battery = -1,
         .camera_battery = 0,
-        .sd_remaining_mb = 0,
+        .sd_remaining_time = 0,
         .rec_keep_enabled = false
     },
     .poweroff = {
@@ -45,7 +45,7 @@ void ui_state_init(void) {
     s_display_state.status.gps_satellites = 0;
     s_display_state.status.device_battery = -1;
     s_display_state.status.camera_battery = 0;
-    s_display_state.status.sd_remaining_mb = 0;
+    s_display_state.status.sd_remaining_time = 0;
     s_display_state.status.rec_keep_enabled = false;
     s_display_state.poweroff.active = false;
     s_display_state.poweroff.countdown = 0;
@@ -70,8 +70,8 @@ void ui_state_set_battery(int device_batt, int camera_batt) {
     s_display_state.status.camera_battery = camera_batt;
 }
 
-void ui_state_set_sd(uint32_t remaining_mb) {
-    s_display_state.status.sd_remaining_mb = remaining_mb;
+void ui_state_set_sd_time(uint32_t remaining_seconds) {
+    s_display_state.status.sd_remaining_time = remaining_seconds;
 }
 
 void ui_state_set_rec_keep(bool enabled) {

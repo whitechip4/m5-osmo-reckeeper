@@ -110,10 +110,10 @@ static void render_battery_indicators(void) {
         }
 
         /* SD card */
-        if (state->status.sd_remaining_mb > 0) {
+        if (state->status.sd_remaining_time > 0) {
             char sd_str[32];
-            dh_format_sd_text(state->status.sd_remaining_mb, sd_str, sizeof(sd_str));
-            uint32_t sd_color = dh_get_sd_card_color(state->status.sd_remaining_mb);
+            dh_format_sd_time(state->status.sd_remaining_time, sd_str, sizeof(sd_str));
+            uint32_t sd_color = dh_get_sd_time_color(state->status.sd_remaining_time);
             M5Sprite_setTextColor(s_buffer, sd_color, TFT_BLACK);
             M5Sprite_drawString(s_buffer, sd_str, 2, layout->y_battery_sd);
         }
