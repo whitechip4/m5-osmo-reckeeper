@@ -1,10 +1,12 @@
 /* SPDX-License-Identifier: MIT */
 /*
  * M5StickC Plus2 DJI Osmo360 BLE Remote
- * Development Step 2: BLE Connection (Simplified)
  *
- * Based on reference/OsmoDemo/ble/ble.c
- * Simplified for basic BLE scanning and connection to DJI Osmo360
+ * Based on Osmo GPS Controller Demo by DJI
+ * Copyright (c) 2025 SZ DJI Technology Co., Ltd.
+ * https://github.com/dji-sdk/Osmo-GPS-Controller-Demo
+ *
+ * The MIT License (MIT)
  */
 
 #include <string.h>

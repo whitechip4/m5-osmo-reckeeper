@@ -1,7 +1,12 @@
 /* SPDX-License-Identifier: MIT */
 /*
  * CRC-16 implementation for DJI protocol
- * DJIプロトコル用CRC-16実装
+ *
+ * Based on Osmo GPS Controller Demo by DJI
+ * Copyright (c) 2025 SZ DJI Technology Co., Ltd.
+ * https://github.com/dji-sdk/Osmo-GPS-Controller-Demo
+ *
+ * The MIT License (MIT)
  */
 
 #include "crc16.h"

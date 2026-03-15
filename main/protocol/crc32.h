@@ -1,7 +1,12 @@
 /* SPDX-License-Identifier: MIT */
 /*
  * CRC-32 implementation for DJI protocol
- * DJIプロトコル用CRC-32実装
+ *
+ * Based on Osmo GPS Controller Demo by DJI
+ * Copyright (c) 2025 SZ DJI Technology Co., Ltd.
+ * https://github.com/dji-sdk/Osmo-GPS-Controller-Demo
+ *
+ * The MIT License (MIT)
  */
 
 #ifndef CRC32_H

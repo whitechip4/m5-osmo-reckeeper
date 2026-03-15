@@ -1,7 +1,12 @@
 /* SPDX-License-Identifier: MIT */
 /*
  * DJI Protocol Data Structures
- * DJIプロトコルデータ構造体
+ *
+ * Based on Osmo GPS Controller Demo by DJI
+ * Copyright (c) 2025 SZ DJI Technology Co., Ltd.
+ * https://github.com/dji-sdk/Osmo-GPS-Controller-Demo
+ *
+ * The MIT License (MIT)
  */
 
 #ifndef DJI_PROTOCOL_DATA_STRUCTURES_H
