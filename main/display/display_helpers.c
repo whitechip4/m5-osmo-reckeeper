@@ -62,11 +62,11 @@ void dh_format_sd_time(uint32_t remaining_seconds, char *buffer, size_t size) {
     uint32_t mins = (remaining_seconds % 3600) / 60;
 
     if (hours > 0) {
-        /* 1時間以上: "SD:XhYm"形式 */
-        snprintf(buffer, size, "SD:%luh%lum", (unsigned long)hours, (unsigned long)mins);
+        /* 1時間以上: "      SD:XhYm"形式 */
+        snprintf(buffer, size, "      SD:%luh%lum", (unsigned long)hours, (unsigned long)mins);
     } else {
-        /* 1時間未満: "SD:Ymin"形式 */
-        snprintf(buffer, size, "SD:%lum", (unsigned long)mins);
+        /* 1時間未満: "      SD:Ymin"形式 */
+        snprintf(buffer, size, "      SD:%lum", (unsigned long)mins);
     }
 }
 

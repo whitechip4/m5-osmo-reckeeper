@@ -41,7 +41,7 @@ void dh_format_device_id(uint32_t device_id, char *buffer, size_t size);
 /* Format battery text
  * Args:
  *   battery: Battery percentage (0-100)
- *   prefix: Text prefix (e.g., "DEV", "CAM", "SD")
+ *   prefix: Text prefix (e.g., "Bat.", "CAMBat.", "SD")
  *   buffer: Output buffer
  *   size: Buffer size */
 void dh_format_battery_text(int battery, const char *prefix, char *buffer, size_t size);

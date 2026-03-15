@@ -89,7 +89,7 @@ static void render_battery_indicators(void) {
         M5Sprite_drawString(s_buffer, "DEV:ERR", 2, layout->y_battery_dev);
     } else {
         char dev_str[16];
-        dh_format_battery_text(state->status.device_battery, "DEV",
+        dh_format_battery_text(state->status.device_battery, "     Bat",
                                dev_str, sizeof(dev_str));
         uint32_t color = dh_get_battery_color(state->status.device_battery, true);
         M5Sprite_setTextColor(s_buffer, color, TFT_BLACK);
@@ -102,7 +102,7 @@ static void render_battery_indicators(void) {
         /* Camera battery */
         if (state->status.camera_battery > 0) {
             char cam_str[16];
-            dh_format_battery_text(state->status.camera_battery, "CAM",
+            dh_format_battery_text(state->status.camera_battery, "  CAMBat",
                                    cam_str, sizeof(cam_str));
             uint32_t cam_color = dh_get_battery_color(state->status.camera_battery, false);
             M5Sprite_setTextColor(s_buffer, cam_color, TFT_BLACK);
