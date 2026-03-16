@@ -91,10 +91,10 @@ void ui_state_set_battery(int device_batt, int camera_batt) {
 }
 
 /**
- * @brief Set SD card remaining time
+ * @brief Set camera storage remaining time
  * @param remaining_seconds Remaining recording time in seconds
  */
-void ui_state_set_sd_time(uint32_t remaining_seconds) {
+void ui_state_set_storage_time(uint32_t remaining_seconds) {
     s_display_state.status.sd_remaining_time = remaining_seconds;
 }
 

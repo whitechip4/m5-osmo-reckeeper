@@ -70,10 +70,10 @@ void ui_state_set_gps(gps_status_t status, uint8_t satellites);
  *   camera_batt: Camera battery percentage (0 for unavailable) */
 void ui_state_set_battery(int device_batt, int camera_batt);
 
-/* Set SD card remaining recording time
+/* Set camera storage remaining recording time
  * Args:
  *   remaining_seconds: Remaining recording time in seconds */
-void ui_state_set_sd_time(uint32_t remaining_seconds);
+void ui_state_set_storage_time(uint32_t remaining_seconds);
 
 /* Set Rec Keep mode state
  * Args:

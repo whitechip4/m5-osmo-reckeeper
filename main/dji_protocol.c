@@ -734,7 +734,7 @@ uint32_t dji_get_sd_remaining_photos(void) {
  * @brief Get estimated remaining recording time
  * @return Remaining recording time in seconds
  */
-uint32_t dji_get_sd_remaining_time(void) {
+uint32_t dji_get_storage_remaining_time(void) {
     return s_sd_remaining_time;
 }
 

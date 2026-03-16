@@ -53,10 +53,10 @@ void dh_format_battery_text(int battery, const char *prefix, char *buffer, size_
  *   size: Buffer size */
 void dh_format_sd_time(uint32_t remaining_seconds, char *buffer, size_t size);
 
-/* Get SD card color based on remaining time
+/* Get camera storage color based on remaining time
  * Args:
  *   remaining_seconds: Remaining recording time in seconds
  * Returns: RGB565 color value */
-uint32_t dh_get_sd_time_color(uint32_t remaining_seconds);
+uint32_t dh_get_storage_time_color(uint32_t remaining_seconds);
 
 #endif /* DISPLAY_HELPERS_H */

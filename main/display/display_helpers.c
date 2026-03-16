@@ -98,12 +98,12 @@ void dh_format_sd_time(uint32_t remaining_seconds, char *buffer, size_t size) {
 }
 
 /**
- * @brief Get SD card color based on remaining time
+ * @brief Get camera storage color based on remaining time
  * @param remaining_seconds Remaining recording time in seconds
  * @return Color value in RGB888 format
  * @note <10min: red, 10-30min: yellow, >=30min: green
  */
-uint32_t dh_get_sd_time_color(uint32_t remaining_seconds) {
+uint32_t dh_get_storage_time_color(uint32_t remaining_seconds) {
     uint32_t mins = remaining_seconds / 60;
     if (mins < 10) {           /* < 10分 */
         return TFT_RED;         /* Critical / 危険 */

@@ -57,15 +57,15 @@ static void update_battery(void) {
 }
 
 /**
- * @brief Update SD card state
- * @note Updates UI state when SD card remaining time changes
+ * @brief Update camera storage state
+ * @note Updates UI state when camera SD card remaining time changes
  */
-static void update_sd_card(void) {
+static void update_camera_storage(void) {
     static uint32_t last_sd_remaining_time = 0xFFFFFFFF;
-    uint32_t current_sd_time = dji_get_sd_remaining_time();
+    uint32_t current_sd_time = dji_get_storage_remaining_time();
 
     if (current_sd_time != last_sd_remaining_time && current_sd_time > 0) {
-        ui_state_set_sd_time(current_sd_time);
+        ui_state_set_storage_time(current_sd_time);
         last_sd_remaining_time = current_sd_time;
     }
 }
@@ -139,7 +139,7 @@ void status_update_all(void) {
 
     /* Update camera battery and SD card when connected */
     if (dji_state == DJI_STATE_PAIRED || dji_state == DJI_STATE_RECORDING) {
-        update_sd_card();
+        update_camera_storage();
     }
 
     /* Update GPS polling and state */

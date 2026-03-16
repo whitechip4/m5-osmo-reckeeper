@@ -206,7 +206,7 @@ uint32_t dji_get_sd_remaining_photos(void);
  * @brief 残り録画時間を取得 (秒)
  * @return 残り録画時間（秒）、0は利用不可
  */
-uint32_t dji_get_sd_remaining_time(void);
+uint32_t dji_get_storage_remaining_time(void);
 
 /**
  * @brief Send GPS module data to camera
