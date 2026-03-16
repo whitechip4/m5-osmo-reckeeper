@@ -7,7 +7,7 @@
 #include "handlers/button_handlers.h"
 #include "ui/ui_state.h"
 #include "ui/ui_renderer.h"
-#include "ble_simple.h"
+#include "comm/ble_simple.h"
 #include "dji_protocol.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"

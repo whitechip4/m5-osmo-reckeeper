@@ -10,7 +10,7 @@
  */
 
 #include <string.h>
-#include "ble_simple.h"
+#include "comm/ble_simple.h"
 #include "storage.h"
 #include "dji_protocol.h"
 #include "nvs.h"

@@ -8,11 +8,11 @@
 #include "ui/ui_state.h"
 #include "ui/ui_renderer.h"
 #include "ui/ui_layout.h"
-#include "ble_simple.h"
+#include "comm/ble_simple.h"
 #include "dji_protocol.h"
 #include "storage.h"
 #include "gps_module.h"
-#include "m5_wrapper.h"
+#include "utils/m5_wrapper.h"
 #include "esp_log.h"
 
 #ifdef __cplusplus

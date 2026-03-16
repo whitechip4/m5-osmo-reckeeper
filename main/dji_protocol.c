@@ -20,7 +20,7 @@
 #include "config.h"
 #include "protocol/dji_protocol_parser.h"
 #include "protocol/dji_protocol_data_structures.h"
-#include "ble_simple.h"
+#include "comm/ble_simple.h"
 #include "gps_module.h"
 
 static const char *TAG = "DJI";

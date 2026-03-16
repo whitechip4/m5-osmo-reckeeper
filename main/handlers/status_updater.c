@@ -9,7 +9,7 @@
 #include "ui/ui_state.h"
 #include "dji_protocol.h"
 #include "gps_module.h"
-#include "m5_wrapper.h"
+#include "utils/m5_wrapper.h"
 #include "config.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"

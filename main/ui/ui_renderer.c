@@ -8,7 +8,7 @@
 #include "ui/ui_state.h"
 #include "ui/ui_layout.h"
 #include "display/display_helpers.h"
-#include "m5_wrapper.h"
+#include "utils/m5_wrapper.h"
 #include "esp_log.h"
 
 #ifdef __cplusplus

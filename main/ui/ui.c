@@ -7,7 +7,7 @@
 
 #include "ui/ui.h"
 #include "ui/ui_renderer.h"
-#include "m5_wrapper.h"
+#include "utils/m5_wrapper.h"
 #include "esp_log.h"
 
 #ifdef __cplusplus

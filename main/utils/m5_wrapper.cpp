@@ -6,7 +6,7 @@
  * Provides C interface to M5Unified C++ API
  */
 
-#include "m5_wrapper.h"
+#include "utils/m5_wrapper.h"
 #include <M5Unified.h>
 #include <lgfx/v1/LGFX_Sprite.hpp>
 #include "esp_system.h"
